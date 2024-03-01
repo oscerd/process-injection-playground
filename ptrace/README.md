@@ -2,6 +2,8 @@
 
 Proof of concept for injecting simple shellcode via ptrace into a running process. 
 
+Based on the work done in: https://github.com/W3ndige/linux-process-injection/tree/master
+
 ## Running
 
 First of all compile:
