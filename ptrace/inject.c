@@ -132,7 +132,7 @@ long parse_maps_file(long victim_pid) {
         if (permissions == NULL) {
             continue;
         } else if (strncmp("r-xp", permissions, 4) == 0) {
-            fprintf(stdout, "[*] Found section mapped with %s permissions.\n", permissions);
+            fprintf(stdout, "-> Found section mapped with %s permissions.\n", permissions);
             free(permissions);
             break;
         }
