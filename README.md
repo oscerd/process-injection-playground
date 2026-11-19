@@ -1,232 +1,113 @@
 # Linux Process Injection Playground
 
-A comprehensive collection of process injection techniques for Linux, demonstrating various methods of injecting code into running processes. These examples are intended for educational purposes, security research, and understanding low-level Linux process manipulation.
+Small, readable Linux labs for studying remote-process memory access, execution
+redirection, dynamic-loader interposition, detection opportunities, and the
+kernel controls that constrain them.
 
-## Overview
+The examples are intended for systems you own or are explicitly authorized to
+test. Prefer the included victim programs: several low-level examples overwrite
+live process state and are intentionally architecture-specific.
 
-Process injection is a technique used to run code in the context of another process. While often associated with malware, these techniques are also valuable for:
+## Labs
 
-- **Security Research**: Understanding attack vectors and developing defenses
-- **Debugging**: Analyzing and modifying running applications
-- **Instrumentation**: Performance profiling and monitoring
-- **Penetration Testing**: Authorized security assessments
-- **CTF Competitions**: Capture The Flag challenges
+| Lab | Lifecycle | Main primitive | Execution trigger | ATT&CK | Notes |
+| --- | --- | --- | --- | --- | --- |
+| [`ptrace`](ptrace/) | Running process | `PTRACE_POKETEXT` | `PTRACE_SETREGS` | [T1055.008](https://attack.mitre.org/techniques/T1055/008/) | x86_64 raw-code example |
+| [`proc_mem`](proc_mem/) | Running process | `/proc/<pid>/mem` | `PTRACE_SETREGS` | [T1055.009](https://attack.mitre.org/techniques/T1055/009/) | x86_64 procfs example |
+| [`process_vm_writev`](process_vm_writev/) | Running child | `process_vm_writev` | None; benign marker only | [T1055](https://attack.mitre.org/techniques/T1055/) | Portable, rootless automated lab |
+| [`dlopen_inject`](dlopen_inject/) | Running process | ptrace memory writes | Remote `dlopen` call | T1055 / T1055.008 | x86_64, glibc, restores patched code |
+| [`ld_preload`](ld_preload/) | Process launch | Dynamic linker | Constructor and symbol interposition | [T1574.006](https://attack.mitre.org/techniques/T1574/006/) | Launch-time linker hijacking, not live injection |
 
-## Available Techniques
+See the [technique matrix](docs/technique-matrix.md) for prerequisites,
+limitations, recovery behavior, and terminology.
 
-### 1. Ptrace-based Code Injection
-**Directory**: `ptrace/`
+## Quick start
 
-The classic process injection method using the `ptrace()` system call to directly write shellcode into a process's memory and redirect execution.
+Requirements:
 
-**Key Features**:
-- Direct memory manipulation via PTRACE_POKETEXT
-- Instruction pointer (RIP) hijacking
-- Raw shellcode injection
+- Linux and GCC
+- GNU Make
+- x86_64 for the existing raw-code and register examples
+- ptrace permission for labs that attach to an existing PID
 
-**Use Case**: Understanding low-level process control and direct code injection
-
-[Read more →](ptrace/README.md)
-
----
-
-### 2. LD_PRELOAD Injection
-**Directory**: `ld_preload/`
-
-Function interposition using the `LD_PRELOAD` environment variable to load a malicious library before any other libraries.
-
-**Key Features**:
-- Environment variable-based injection
-- Function hooking via symbol interposition
-- Constructor/destructor functions
-- Easy to implement but also easy to detect
-
-**Use Case**: Function hooking, API monitoring, behavior modification
-
-[Read more →](ld_preload/README.md)
-
----
-
-### 3. /proc/mem Write Injection
-**Directory**: `proc_mem/`
-
-Direct memory writing through the `/proc/<pid>/mem` filesystem interface, combined with ptrace for process control.
-
-**Key Features**:
-- Direct memory access via filesystem
-- More efficient than PTRACE_POKETEXT for large payloads
-- Single write operation for entire shellcode
-- No word alignment requirements
-
-**Use Case**: Fast bulk memory injection, bypassing traditional ptrace limitations
-
-[Read more →](proc_mem/README.md)
-
----
-
-### 4. dlopen() Library Injection
-**Directory**: `dlopen_inject/`
-
-Sophisticated technique that forces a running process to load a shared library by hijacking execution to call `dlopen()`.
-
-**Key Features**:
-- Works on already-running processes (unlike LD_PRELOAD)
-- Persistent (library remains loaded)
-- Enables complex payloads with full library capabilities
-- Can hook functions like LD_PRELOAD but post-startup
-
-**Use Case**: Advanced persistent injection, runtime library manipulation
-
-[Read more →](dlopen_inject/README.md)
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- Linux system (tested on x86_64)
-- GCC compiler
-- Root access or CAP_SYS_PTRACE capability
-- Make build tool
-
-### Building All Examples
+Build everything from the repository root:
 
 ```bash
-# Build ptrace injection
-cd ptrace && make all
-
-# Build LD_PRELOAD injection
-cd ../ld_preload && make all
-
-# Build /proc/mem injection
-cd ../proc_mem && make all
-
-# Build dlopen injection
-cd ../dlopen_inject && make all
+make
 ```
 
-### Basic Usage Pattern
+Run the safe automated test:
 
-Each technique follows a similar pattern:
+```bash
+make test
+```
 
-1. **Start the victim process**:
-   ```bash
-   cd <technique>/victim-process
-   ./sample
-   ```
-   Note the PID displayed
+The test starts a controlled child and uses `process_vm_writev` to place a
+benign marker in its writable memory. It normally needs neither root nor a
+change to `kernel.yama.ptrace_scope`.
 
-2. **Perform injection**:
-   ```bash
-   cd <technique>
-   sudo ./<injector> <PID> [additional args]
-   ```
+Individual labs retain their own `Makefile` and README:
 
-3. **Observe results**: Check victim process output for injected code execution
+```bash
+make -C ptrace
+make -C process_vm_writev test
+make clean
+```
 
-See individual README files for technique-specific instructions.
+## Mental model
 
-## Comparison Matrix
+A Linux injection chain is easier to understand when separated into parts:
 
-| Technique | Complexity | Stealth | Persistence | Speed | Works on Running Process |
-|-----------|-----------|---------|-------------|-------|-------------------------|
-| **ptrace** | Medium | Low | No | Medium | Yes |
-| **LD_PRELOAD** | Low | Very Low | No | Fast | No |
-| **/proc/mem** | Medium | Low | No | Fast | Yes |
-| **dlopen** | High | Medium | Yes | Medium | Yes |
+1. **Target access** — credentials, dumpability, capabilities, Yama, and other
+   Linux Security Modules decide whether cross-process access is allowed.
+2. **Memory write** — examples include ptrace requests, `/proc/<pid>/mem`, and
+   `process_vm_writev`.
+3. **Execution trigger** — examples include changing registers, patching an
+   instruction, replacing a stack return address, or changing a function
+   pointer.
+4. **Recovery** — reliable tooling restores registers and overwritten bytes and
+   accounts for signals and multiple threads.
 
-### When to Use Which?
+A remote-memory write alone is not code execution. Likewise, `LD_PRELOAD` is a
+controlled-launch linker feature rather than injection into an already-running
+process. Keeping those distinctions visible is a core goal of this playground.
 
-- **ptrace**: Learning fundamentals, simple shellcode injection
-- **LD_PRELOAD**: Quick function hooking, debugging, when you control process startup
-- **/proc/mem**: Fast injection of large payloads, when PTRACE_POKETEXT is too slow
-- **dlopen**: Persistent injection, complex payloads, when you need full library capabilities
+## Documentation
 
-## Security Considerations
+- [Technique and capability matrix](docs/technique-matrix.md)
+- [Detection lab](docs/detection-lab.md)
+- [Curated references](docs/references.md)
+- [Roadmap](docs/roadmap.md)
 
-### Defensive Measures
+## Security controls worth testing
 
-1. **Yama ptrace_scope**: Restrict ptrace to privileged users
-   ```bash
-   echo 1 | sudo tee /proc/sys/kernel/yama/ptrace_scope
-   ```
+- Yama `kernel.yama.ptrace_scope`
+- target credentials and `PR_SET_DUMPABLE`
+- `CAP_SYS_PTRACE`
+- SELinux and AppArmor policy
+- PID and user namespaces
+- writable versus executable mappings, PIE, NX, and RELRO
+- static linking and alternate C libraries such as musl
 
-2. **SELinux/AppArmor**: Mandatory access controls
-
-3. **Monitoring**: Use auditd to log ptrace and process injection attempts
-   ```bash
-   auditctl -a exit,always -F arch=b64 -S ptrace
-   ```
-
-4. **Runtime Integrity Checking**: Periodically verify process memory
-
-5. **Code Signing**: Verify library signatures
-
-### Detection Methods
-
-- Monitor `/proc/<pid>/maps` for unexpected memory regions or libraries
-- Watch for ptrace attach attempts via system logs
-- Check environment variables (LD_PRELOAD)
-- Use tools like `lsof`, `pmap`, and process monitoring utilities
-- Enable kernel security modules
-
-## Legal and Ethical Notice
-
-**IMPORTANT**: These techniques should only be used in authorized contexts:
-
-**This repository is for educational and research purposes only.** The authors are not responsible for misuse of these techniques. Always obtain proper authorization before testing on any system.
-
-## Troubleshooting
-
-### Common Issues
-
-**Permission denied errors**:
-- Run with `sudo`
-- Check `/proc/sys/kernel/yama/ptrace_scope`
-- Verify SELinux/AppArmor policies
-
-**Injection fails silently**:
-- Verify target process is not statically linked
-- Check that target process has required libraries loaded
-- Ensure shellcode is correct for your architecture
-
-**Segmentation faults**:
-- Verify you're on x86_64 architecture
-- Check that target process is not protected
-- Ensure proper memory alignment
-
-See individual technique READMEs for specific troubleshooting guidance.
+The examples never change those controls automatically. In particular, do not
+lower a host-wide `ptrace_scope` just to run a lab; use a controlled parent-child
+target or an isolated disposable environment.
 
 ## Contributing
 
-Contributions are welcome! Potential additions:
+New labs should include:
 
-- Additional injection techniques (GOT/PLT hooking, VDSO manipulation, etc.)
-- Windows equivalents for comparison
-- Detection/prevention tools
-- ARM architecture support
-- Additional shellcode examples
-- Defensive programming examples
+- a controlled victim and benign default payload;
+- supported architectures, kernel/library assumptions, and permissions;
+- a one-command build and deterministic test where practical;
+- expected observables and a blocked/negative case;
+- cleanup or state-recovery behavior;
+- accurate ATT&CK mapping and primary references.
 
-## References
-
-### Documentation
-- `man 2 ptrace` - Process tracing system call
-- `man 5 proc` - /proc filesystem documentation
-- `man 3 dlopen` - Dynamic library loading
-- Linux kernel source: process memory management
-
-### Related Research
-- "Linux Process Injection" techniques and evolution
-- "Ptrace Injection" methodologies
-- "Shared Library Injection" best practices
-- MITRE ATT&CK: T1055 (Process Injection)
+The roadmap contains suggested additions including GOT overwrite, VDSO
+hijacking, `memfd`-backed library loading, AArch64 support, multi-thread recovery,
+and seccomp user-notification research.
 
 ## License
 
-See [LICENSE.txt](LICENSE.txt) for details.
-
-## Disclaimer
-
-This software is provided "as is" for educational purposes. Use responsibly and ethically. Always obtain proper authorization before testing security techniques on any system you do not own.
+Apache License 2.0. See [LICENSE.txt](LICENSE.txt).

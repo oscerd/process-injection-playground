@@ -8,7 +8,7 @@ This technique injects a shared library into a running process by forcing it to 
 
 1. **Attach with ptrace**: Pause the target process
 2. **Save state**: Save original registers and memory
-3. **Locate dlopen**: Find the address of `__libc_dlopen_mode` in the victim's address space
+3. **Locate dlopen**: Find the address of `dlopen` in the victim's address space
 4. **Allocate string**: Find writable memory and write the library path
 5. **Create shellcode**: Generate machine code to call `dlopen(library_path, RTLD_NOW)`
 6. **Execute**: Inject and execute the shellcode
@@ -18,11 +18,12 @@ This technique injects a shared library into a running process by forcing it to 
 
 ## Technical Details
 
-### Why `__libc_dlopen_mode` instead of `dlopen`?
+### Resolving `dlopen`
 
-- `dlopen` is often a wrapper or inline function
-- `__libc_dlopen_mode` is the actual implementation in libc
-- More reliable for direct invocation
+The example calculates the local `dlopen` offset from the libc load base and
+applies that offset to the target's libc mapping. This requires the injector and
+target to use a compatible libc build. It deliberately avoids private glibc
+symbols such as `__libc_dlopen_mode`, which are not a stable public interface.
 
 ### x86_64 Calling Convention
 
@@ -104,7 +105,7 @@ sudo ./inject 12345 ./malicious_lib.so
 [+] Attached successfully
 [+] Original RIP: 0x7ffff7af1234
 [+] Found libc base: 0x7ffff7a00000
-[+] __libc_dlopen_mode address in target: 0x7ffff7a12340
+[+] dlopen address in target: 0x7ffff7a12340
 [+] Found writable region: 0x7ffff7dd5000-0x7ffff7dd7000
 [*] Writing library path to 0x7ffff7dd5000...
 [*] Writing shellcode to 0x7ffff7af1234...

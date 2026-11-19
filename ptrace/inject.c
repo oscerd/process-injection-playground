@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <errno.h>
 #include <limits.h>
@@ -155,9 +157,6 @@ int main(int argc, const char *argv[]) {
         exit(EXIT_FAILURE);
     }
     
-    printf("%d\n", getpid());
-    sleep(60);
-
     long pid_max = get_proc_pid_max();
     long victim_pid = strtol(argv[1], (char **) NULL, 10);
 

