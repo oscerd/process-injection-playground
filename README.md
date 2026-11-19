@@ -58,14 +58,14 @@ make clean
 
 A Linux injection chain is easier to understand when separated into parts:
 
-1. **Target access** — credentials, dumpability, capabilities, Yama, and other
+1. **Target access**: credentials, dumpability, capabilities, Yama, and other
    Linux Security Modules decide whether cross-process access is allowed.
-2. **Memory write** — examples include ptrace requests, `/proc/<pid>/mem`, and
+2. **Memory write**: examples include ptrace requests, `/proc/<pid>/mem`, and
    `process_vm_writev`.
-3. **Execution trigger** — examples include changing registers, patching an
+3. **Execution trigger**: examples include changing registers, patching an
    instruction, replacing a stack return address, or changing a function
    pointer.
-4. **Recovery** — reliable tooling restores registers and overwritten bytes and
+4. **Recovery**: reliable tooling restores registers and overwritten bytes and
    accounts for signals and multiple threads.
 
 A remote-memory write alone is not code execution. Likewise, `LD_PRELOAD` is a
