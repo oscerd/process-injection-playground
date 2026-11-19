@@ -14,9 +14,10 @@ live process state and are intentionally architecture-specific.
 | --- | --- | --- | --- | --- | --- |
 | [`ptrace`](ptrace/) | Running process | `PTRACE_POKETEXT` | `PTRACE_SETREGS` | [T1055.008](https://attack.mitre.org/techniques/T1055/008/) | x86_64 raw-code example |
 | [`proc_mem`](proc_mem/) | Running process | `/proc/<pid>/mem` | `PTRACE_SETREGS` | [T1055.009](https://attack.mitre.org/techniques/T1055/009/) | x86_64 procfs example |
-| [`process_vm_writev`](process_vm_writev/) | Running child | `process_vm_writev` | None; benign marker only | [T1055](https://attack.mitre.org/techniques/T1055/) | Portable, rootless automated lab |
+| [`process_vm_writev`](process_vm_writev/) | Running child | `process_vm_writev` | Marker write or function-pointer redirection | [T1055](https://attack.mitre.org/techniques/T1055/) | Benign, rootless automated labs |
 | [`dlopen_inject`](dlopen_inject/) | Running process | ptrace memory writes | Remote `dlopen` call | T1055 / T1055.008 | x86_64, glibc, restores patched code |
 | [`ld_preload`](ld_preload/) | Process launch | Dynamic linker | Constructor and symbol interposition | [T1574.006](https://attack.mitre.org/techniques/T1574/006/) | Launch-time linker hijacking, not live injection |
+| [`memfd_dlopen`](memfd_dlopen/) | Current process | `memfd_create` and `dlopen` | ELF constructor and exported function | [T1620](https://attack.mitre.org/techniques/T1620/) | Memory-backed staging, not remote injection |
 
 See the [technique matrix](docs/technique-matrix.md) for prerequisites,
 limitations, recovery behavior, and terminology.
@@ -42,8 +43,8 @@ Run the safe automated test:
 make test
 ```
 
-The test starts a controlled child and uses `process_vm_writev` to place a
-benign marker in its writable memory. It normally needs neither root nor a
+The tests cover a benign marker write, controlled function-pointer redirection,
+and memory-backed shared-object loading. They normally need neither root nor a
 change to `kernel.yama.ptrace_scope`.
 
 Individual labs retain their own `Makefile` and README:

@@ -27,10 +27,11 @@ fragile injection variants.
 ## Technique coverage
 
 - [x] Add the `process_vm_writev` memory-write primitive.
-- [ ] Compose `process_vm_writev` with a separately testable execution trigger.
+- [x] Compose `process_vm_writev` with a separately testable execution trigger.
 - [ ] Add a GOT/function-pointer overwrite lab and Full RELRO blocked case.
 - [ ] Add a controlled stack return-address overwrite lab.
 - [ ] Add `PTRACE_SEIZE` and compare its stop behavior with `PTRACE_ATTACH`.
+- [x] Add in-process `memfd`-backed shared-object staging.
 - [ ] Add an on-disk versus `memfd`-backed remote `dlopen` comparison.
 - [ ] Add a VDSO hijacking lab mapped to T1055.014.
 - [ ] Add a GDB-based example as a legitimate-tool comparison.

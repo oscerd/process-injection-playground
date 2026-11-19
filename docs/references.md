@@ -10,9 +10,12 @@ mechanism and its defensive implications.
 - [MITRE ATT&CK: Proc Memory (T1055.009)](https://attack.mitre.org/techniques/T1055/009/)
 - [MITRE ATT&CK: VDSO Hijacking (T1055.014)](https://attack.mitre.org/techniques/T1055/014/)
 - [MITRE ATT&CK: Dynamic Linker Hijacking (T1574.006)](https://attack.mitre.org/techniques/T1574/006/)
+- [MITRE ATT&CK: Reflective Code Loading (T1620)](https://attack.mitre.org/techniques/T1620/)
 - [`ptrace(2)`](https://man7.org/linux/man-pages/man2/ptrace.2.html)
 - [`process_vm_readv(2)` and `process_vm_writev(2)`](https://man7.org/linux/man-pages/man2/process_vm_readv.2.html)
 - [`/proc/<pid>/mem`](https://man7.org/linux/man-pages/man5/proc_pid_mem.5.html)
+- [`memfd_create(2)`](https://man7.org/linux/man-pages/man2/memfd_create.2.html)
+- [`dlopen(3)`](https://man7.org/linux/man-pages/man3/dlopen.3.html)
 - [Yama Linux Security Module](https://www.kernel.org/doc/html/latest/admin-guide/LSM/Yama.html)
 
 ## Technique research

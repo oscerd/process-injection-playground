@@ -3,8 +3,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
+
+#include "../demo_protocol.h"
 
 static volatile uint64_t injection_marker;
 
@@ -28,22 +31,29 @@ static int write_exact(int fd, const void *buffer, size_t length) {
 int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0);
 
-    uintptr_t marker_address = (uintptr_t)&injection_marker;
-    const char *address_fd_text = getenv("PIP_ADDRESS_FD");
-    if (address_fd_text != NULL) {
+    const char *request_fd_text = getenv("PIP_REQUEST_FD");
+    if (request_fd_text != NULL) {
         char *end = NULL;
-        long address_fd = strtol(address_fd_text, &end, 10);
-        if (end == address_fd_text || *end != '\0' || address_fd < 0 ||
-            write_exact((int)address_fd, &marker_address,
-                        sizeof(marker_address)) != 0) {
-            perror("announce marker address");
+        long request_fd = strtol(request_fd_text, &end, 10);
+        struct pip_demo_request request = {
+            .magic = PIP_DEMO_MAGIC,
+            .remote_address = (uintptr_t)&injection_marker,
+            .length = sizeof(PIP_DEMO_MARKER),
+        };
+        uint64_t marker = PIP_DEMO_MARKER;
+        memcpy(request.value, &marker, sizeof(marker));
+
+        if (end == request_fd_text || *end != '\0' || request_fd < 0 ||
+            write_exact((int)request_fd, &request, sizeof(request)) != 0) {
+            perror("announce remote-write request");
             return EXIT_FAILURE;
         }
-        close((int)address_fd);
+        close((int)request_fd);
     }
 
     printf("Victim PID: %d\n", getpid());
-    printf("Marker address: 0x%" PRIxPTR "\n", marker_address);
+    printf("Marker address: 0x%" PRIxPTR "\n",
+           (uintptr_t)&injection_marker);
     printf("Waiting for a benign remote marker...\n");
 
     const struct timespec interval = {

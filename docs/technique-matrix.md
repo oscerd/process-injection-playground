@@ -8,9 +8,11 @@ injection,” which makes examples difficult to compare.
 | --- | --- | --- | --- | --- | --- | --- |
 | `ptrace` | Existing process | `PTRACE_POKETEXT` | RIP changed with `PTRACE_SETREGS` | x86_64 | ptrace attach permitted | No; target state is overwritten |
 | `proc_mem` | Existing process | Write to `/proc/<pid>/mem` | RIP changed with `PTRACE_SETREGS` | x86_64 | procfs memory access and ptrace attach permitted | No; target state is overwritten |
-| `process_vm_writev` | Existing child or permitted PID | `process_vm_writev` into writable data | None in this lab | Architecture-neutral | ptrace access-mode check permits the writer | Not needed; target observes a data marker and exits normally |
+| `process_vm_writev` marker | Existing child or permitted PID | `process_vm_writev` into writable data | None | Architecture-neutral | ptrace access-mode check permits the writer | Not needed; target observes a data marker and exits normally |
+| `process_vm_writev` function pointer | Existing child | `process_vm_writev` into writable data | Target's next indirect call | Common Linux ABIs | ptrace access-mode check permits the writer | Not needed; target executes a pre-existing benign callback and exits normally |
 | `dlopen_inject` | Existing process | `PTRACE_POKETEXT` | Temporary stub calls `dlopen` | x86_64, glibc | ptrace attach permitted; compatible libc | Patched instruction bytes and registers are restored; loaded library remains |
 | `ld_preload` | Controlled launch | ELF dynamic loader | Constructor and symbol resolution | Generally architecture-neutral | Control of the new process environment | Not applicable |
+| `memfd_dlopen` | Current process | `memfd_create`, `/proc/self/fd`, and `dlopen` | Constructor and exported function | Generally architecture-neutral | Ability to create a memfd and load an ELF object | Handle is closed normally; mapping is removed by `dlclose` |
 
 ## ATT&CK mapping notes
 
@@ -23,6 +25,9 @@ injection,” which makes examples difficult to compare.
   the actual execution trigger when one is present.
 - Linux `LD_PRELOAD` maps to
   [T1574.006, Dynamic Linker Hijacking](https://attack.mitre.org/techniques/T1574/006/).
+- In-process loading from an anonymous file is closer to
+  [T1620, Reflective Code Loading](https://attack.mitre.org/techniques/T1620/)
+  than T1055 because no separate process is modified.
 - [T1055.001](https://attack.mitre.org/techniques/T1055/001/) describes Windows
   DLL injection and should not be used merely because a Linux lab loads a shared
   object.
@@ -39,9 +44,9 @@ Security Modules can therefore affect all three approaches.
 
 The most useful next combinations are:
 
-1. `process_vm_writev` plus a separately implemented execution trigger.
-2. GOT/function-pointer overwrite with Partial versus Full RELRO targets.
-3. Stack return-address overwrite against a controlled child.
+1. GOT overwrite with Partial versus Full RELRO targets.
+2. Stack return-address overwrite against a controlled child.
+3. Remote `memfd` staging combined with the existing `dlopen` injector.
 4. Reliable save, trap, restore, and detach behavior for the raw-code labs.
 5. Multi-thread targets and signal/syscall interruption.
 6. AArch64 register and instruction-cache handling.

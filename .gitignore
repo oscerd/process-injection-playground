@@ -1,3 +1,5 @@
 /*/inject
+/*/loader
 /*/*.so
 /*/victim-process/sample
+/process_vm_writev/victim-process/function_pointer

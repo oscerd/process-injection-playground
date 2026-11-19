@@ -4,7 +4,9 @@ CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -O2 -g
 
 .PHONY: all clean test
 
-all: inject victim-process/sample
+VICTIMS := victim-process/sample victim-process/function_pointer
+
+all: inject $(VICTIMS)
 
 inject: inject.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $<
@@ -12,13 +14,18 @@ inject: inject.c
 victim-process/sample: victim-process/sample.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
+victim-process/function_pointer: victim-process/function_pointer.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $<
+
 test: all
-	@status=0; ./inject --spawn ./victim-process/sample || status=$$?; \
-	if [ "$$status" -eq 77 ]; then \
-		echo "[SKIP] Cross-process memory writes are blocked by this environment"; \
-		exit 0; \
-	fi; \
-	exit "$$status"
+	@set -e; for victim in $(VICTIMS); do \
+		status=0; ./inject --spawn "./$$victim" || status=$$?; \
+		if [ "$$status" -eq 77 ]; then \
+			echo "[SKIP] Cross-process writes are blocked for $$victim"; \
+		elif [ "$$status" -ne 0 ]; then \
+			exit "$$status"; \
+		fi; \
+	done
 
 clean:
-	rm -f inject victim-process/sample
+	rm -f inject $(VICTIMS)

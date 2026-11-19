@@ -4,11 +4,18 @@ This lab demonstrates `process_vm_writev(2)`, one of the three main Linux
 interfaces used to modify another process alongside `ptrace` writes and
 `/proc/<pid>/mem`.
 
-The example deliberately writes a benign 64-bit marker into a writable global
-variable. It does not redirect execution. That distinction is important:
-`process_vm_writev` is a **write primitive**, while a complete process-injection
-chain also needs an execution trigger such as register, stack, instruction, or
-function-pointer manipulation.
+The directory contains two controlled victims:
+
+1. `sample` receives a benign 64-bit marker in a writable global variable. It
+   demonstrates the remote-memory write primitive without redirecting execution.
+2. `function_pointer` receives the address of a benign callback already present
+   in its executable. Replacing its writable function-pointer slot redirects the
+   next indirect call without injecting new code.
+
+This distinction matters: `process_vm_writev` is a **write primitive**. A full
+process-injection chain also needs an execution trigger such as register, stack,
+instruction, or function-pointer manipulation, plus actual code staging if the
+desired code is not already mapped in the target.
 
 ## Build and test
 
@@ -17,10 +24,11 @@ make
 make test
 ```
 
-The automated demonstration starts its own child process, obtains the address
-of the child's marker through a pipe, writes the marker, and waits for the child
-to confirm it. Because the target is a direct child, this normally works as an
-unprivileged user when Yama uses its common `ptrace_scope=1` configuration.
+The automated demonstrations start their own child processes. Each victim sends
+a bounded write request through a pipe, including the target address and the
+bytes expected by that particular lab. Because the target is a direct child,
+this normally works as an unprivileged user when Yama uses its common
+`ptrace_scope=1` configuration.
 If an outer container or sandbox seccomp policy denies cross-process memory
 writes, `make test` reports the integration test as skipped instead of weakening
 that policy.
@@ -29,9 +37,10 @@ Expected output includes:
 
 ```text
 [*] Spawned controlled victim PID ...
-[+] Wrote 0xc0defacecafebeef ...
+[+] Wrote 8 bytes ...
 Observed marker: 0xc0defacecafebeef
-[+] Victim confirmed the remote write
+[REDIRECTED] Benign function-pointer callback executed
+[+] Victim confirmed the requested behavior
 ```
 
 ## Manual mode
@@ -56,6 +65,8 @@ than weakening the host's policy.
 
 - The `process_vm_writev` system call and its source and target PIDs.
 - No `PTRACE_ATTACH` request is needed for this example.
+- The function-pointer victim changes control flow but stages no new executable
+  bytes; both possible callback functions were compiled into the target.
 - The destination must be writable; unlike `/proc/<pid>/mem` and some ptrace
   requests, this interface respects the target mapping's permissions.
 - Access is still governed by a ptrace access-mode check and can fail with

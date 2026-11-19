@@ -63,6 +63,7 @@ than ad hoc commands.
 | ptrace | Attach followed by memory/register modification requests | GDB, debuggers, profilers, crash handlers |
 | `/proc/<pid>/mem` | One process opens and writes another PID's `mem` file | Debuggers, diagnostics, specialized checkpoint tools |
 | `process_vm_writev` | Source and target PIDs differ and the target is not an expected child/tool relationship | MPI/message-passing software, debuggers, compatibility layers |
+| `memfd` plus `dlopen` | Writes to a memfd followed by `/proc/self/fd` access and an executable memory-backed ELF mapping | JIT runtimes, sandboxing, package systems, temporary executable artifacts |
 | remote `dlopen` | ptrace activity followed by a new shared-object mapping | Debuggers, live instrumentation, observability agents |
 | `LD_PRELOAD` | Loader variable plus an unusual early library mapping | Profilers, sanitizers, compatibility shims, test harnesses |
 
@@ -76,6 +77,8 @@ than ad hoc commands.
   cases in disposable environments.
 - For a future GOT lab, compile targets with Partial and Full RELRO and make the
   blocked write an asserted test outcome.
+- Compare an ordinary file-backed `dlopen` with `memfd_dlopen` and record the
+  differences in file, module-load, and memory-map telemetry.
 
 Do not automatically weaken Yama, SELinux, AppArmor, or container isolation in
 test scripts. A blocked lab is useful evidence, not a setup failure.

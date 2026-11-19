@@ -10,7 +10,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define DEMO_MARKER UINT64_C(0xc0defacecafebeef)
+#include "demo_protocol.h"
 
 static void usage(const char *program) {
     fprintf(stderr,
@@ -39,14 +39,14 @@ static int read_exact(int fd, void *buffer, size_t length) {
     while (consumed < length) {
         ssize_t result = read(fd, (char *)buffer + consumed, length - consumed);
         if (result == 0) {
-            fprintf(stderr, "[-] Victim closed the address pipe early\n");
+            fprintf(stderr, "[-] Victim closed the request pipe early\n");
             return -1;
         }
         if (result < 0) {
             if (errno == EINTR) {
                 continue;
             }
-            perror("read address pipe");
+            perror("read request pipe");
             return -1;
         }
         consumed += (size_t)result;
@@ -55,14 +55,15 @@ static int read_exact(int fd, void *buffer, size_t length) {
     return 0;
 }
 
-static int write_marker(pid_t pid, uintptr_t remote_address, uint64_t value) {
+static int write_remote(pid_t pid, uintptr_t remote_address, const void *value,
+                        size_t length) {
     struct iovec local = {
-        .iov_base = &value,
-        .iov_len = sizeof(value),
+        .iov_base = (void *)value,
+        .iov_len = length,
     };
     struct iovec remote = {
         .iov_base = (void *)remote_address,
-        .iov_len = sizeof(value),
+        .iov_len = length,
     };
 
     errno = 0;
@@ -73,21 +74,21 @@ static int write_marker(pid_t pid, uintptr_t remote_address, uint64_t value) {
         errno = write_error;
         return -1;
     }
-    if ((size_t)written != sizeof(value)) {
+    if ((size_t)written != length) {
         fprintf(stderr, "[-] Partial remote write: %zd of %zu bytes\n", written,
-                sizeof(value));
+                length);
         errno = EIO;
         return -1;
     }
 
-    printf("[+] Wrote 0x%016" PRIx64 " to PID %d at 0x%" PRIxPTR "\n",
-           value, pid, remote_address);
+    printf("[+] Wrote %zu bytes to PID %d at 0x%" PRIxPTR "\n", length,
+           pid, remote_address);
     return 0;
 }
 
 static int run_spawn_demo(const char *victim_program) {
-    int address_pipe[2];
-    if (pipe(address_pipe) != 0) {
+    int request_pipe[2];
+    if (pipe(request_pipe) != 0) {
         perror("pipe");
         return EXIT_FAILURE;
     }
@@ -95,17 +96,17 @@ static int run_spawn_demo(const char *victim_program) {
     pid_t child = fork();
     if (child < 0) {
         perror("fork");
-        close(address_pipe[0]);
-        close(address_pipe[1]);
+        close(request_pipe[0]);
+        close(request_pipe[1]);
         return EXIT_FAILURE;
     }
 
     if (child == 0) {
         char fd_text[32];
 
-        close(address_pipe[0]);
-        if (snprintf(fd_text, sizeof(fd_text), "%d", address_pipe[1]) < 0 ||
-            setenv("PIP_ADDRESS_FD", fd_text, 1) != 0) {
+        close(request_pipe[0]);
+        if (snprintf(fd_text, sizeof(fd_text), "%d", request_pipe[1]) < 0 ||
+            setenv("PIP_REQUEST_FD", fd_text, 1) != 0) {
             perror("prepare victim environment");
             _exit(127);
         }
@@ -115,22 +116,32 @@ static int run_spawn_demo(const char *victim_program) {
         _exit(127);
     }
 
-    close(address_pipe[1]);
+    close(request_pipe[1]);
 
-    uintptr_t remote_address = 0;
-    if (read_exact(address_pipe[0], &remote_address, sizeof(remote_address)) != 0) {
-        close(address_pipe[0]);
+    struct pip_demo_request request = {0};
+    if (read_exact(request_pipe[0], &request, sizeof(request)) != 0) {
+        close(request_pipe[0]);
         kill(child, SIGTERM);
         waitpid(child, NULL, 0);
         return EXIT_FAILURE;
     }
-    close(address_pipe[0]);
+    close(request_pipe[0]);
+
+    if (request.magic != PIP_DEMO_MAGIC || request.remote_address == 0 ||
+        request.length == 0 || request.length > sizeof(request.value)) {
+        fprintf(stderr, "[-] Victim sent an invalid write request\n");
+        kill(child, SIGTERM);
+        waitpid(child, NULL, 0);
+        return EXIT_FAILURE;
+    }
 
     printf("[*] Spawned controlled victim PID %d\n", child);
-    printf("[*] Victim marker address: 0x%" PRIxPTR "\n", remote_address);
+    printf("[*] Victim write address: 0x%" PRIxPTR "\n",
+           request.remote_address);
     fflush(stdout);
 
-    if (write_marker(child, remote_address, DEMO_MARKER) != 0) {
+    if (write_remote(child, request.remote_address, request.value,
+                     request.length) != 0) {
         int write_error = errno;
         kill(child, SIGTERM);
         waitpid(child, NULL, 0);
@@ -153,7 +164,7 @@ static int run_spawn_demo(const char *victim_program) {
         return EXIT_FAILURE;
     }
 
-    printf("[+] Victim confirmed the remote write\n");
+    printf("[+] Victim confirmed the requested behavior\n");
     return EXIT_SUCCESS;
 }
 
@@ -169,7 +180,7 @@ int main(int argc, char **argv) {
 
     uint64_t pid_value = 0;
     uint64_t address_value = 0;
-    uint64_t marker = DEMO_MARKER;
+    uint64_t marker = PIP_DEMO_MARKER;
     if (parse_u64(argv[1], &pid_value) != 0 || pid_value == 0 ||
         pid_value > INT32_MAX) {
         fprintf(stderr, "[-] Invalid PID: %s\n", argv[1]);
@@ -184,7 +195,8 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    return write_marker((pid_t)pid_value, (uintptr_t)address_value, marker) == 0
+    return write_remote((pid_t)pid_value, (uintptr_t)address_value, &marker,
+                        sizeof(marker)) == 0
                ? EXIT_SUCCESS
                : EXIT_FAILURE;
 }
