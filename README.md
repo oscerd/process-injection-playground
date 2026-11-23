@@ -4,9 +4,16 @@ Small, readable Linux labs for studying remote-process memory access, execution
 redirection, dynamic-loader interposition, detection opportunities, and the
 kernel controls that constrain them.
 
-The examples are intended for systems you own or are explicitly authorized to
-test. Prefer the included victim programs: several low-level examples overwrite
-live process state and are intentionally architecture-specific.
+## Responsible use
+
+This project is provided strictly for education, defensive research, and
+testing in environments you own or have explicit permission to assess. Do not
+use these techniques to access, modify, disrupt, or monitor systems without
+authorization, or for any activity that violates applicable law. You are
+responsible for using the material safely and legally.
+
+Prefer the included victim programs. Several low-level examples overwrite live
+process state and are intentionally architecture-specific.
 
 ## Labs
 
