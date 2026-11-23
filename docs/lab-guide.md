@@ -71,7 +71,10 @@ pair demonstrates that:
 - `PTRACE_POKEUSER` can produce the same final RIP and RSP values through
   separate architecture-specific user-area writes.
 
-Then compare it with `ptrace`, which adds memory writes and register changes.
+Run `ptrace_restore` next. It adds a temporary code stub and register redirect,
+regains control through `INT3`, restores code, data, and registers, and proves
+that the child resumes. Then compare it with the legacy `ptrace` example, which
+adds memory writes and register changes without recovery.
 
 ## Stage 4: Other write and execution combinations
 
@@ -99,9 +102,11 @@ For each example, identify:
 inside the current process. Compare its memory maps and file activity with the
 ordinary file-backed `dlopen` path.
 
-This is in-process loading, not process injection. Combining it with remote
-injection would require a separate method to create, populate, and load the
-memfd within the target.
+Then run `remote_memfd_dlopen` in both modes. It uses the same ptrace-driven
+remote `dlopen` call for an ordinary path and an inherited memfd path. The
+parent creates and populates the memfd before the controlled child starts, so
+the lab demonstrates remote loading from an inherited descriptor rather than
+remote `memfd_create` inside an arbitrary process.
 
 ## Observe and deny
 
@@ -122,6 +127,7 @@ example succeed.
 - Add `PR_SET_DUMPABLE=0` to another victim and compare the error path.
 - Compare PIE and non-PIE target addresses.
 - Inspect Partial and Full RELRO binaries with `readelf`.
-- Capture `/proc/<pid>/maps` before and after `dlopen` and `memfd_dlopen`.
+- Capture `/proc/<pid>/maps` for both `remote_memfd_dlopen` modes and compare
+  named and `memfd:` mappings.
 - Write a detector that distinguishes `PTRACE_SEIZE` observation from later
   memory or register modification.

@@ -67,6 +67,19 @@ replaces the register set with `PTRACE_SETREGS`; the other writes RIP and RSP
 individually with `PTRACE_POKEUSER`. Neither run adds an executable mapping, but
 RIP changes to an existing function in the victim.
 
+The recovery-oriented sequence is longer:
+
+```bash
+strace -f -e trace=ptrace,wait4 \
+  ./ptrace_restore/inject --spawn \
+  ./ptrace_restore/victim-process/sample
+```
+
+It includes reads of the original state, code and register writes, continuation,
+an `INT3` stop, restoration writes, verification reads, and detach. Restoration
+reduces the lasting in-memory artifact, but it does not erase the earlier
+ptrace sequence from syscall, audit, or endpoint telemetry.
+
 The negative remote-write case is also executable:
 
 ```bash
@@ -128,6 +141,25 @@ The high-signal sequence is `PTRACE_TRACEME`, `execve`, an exec-time stop,
 `PTRACE_GETREGS`, `PTRACE_POKETEXT`, and continuation. A debugger can share much
 of that lifecycle, so verify that the entry bytes diverge from the backing file.
 
+Compare remote disk-backed and memfd-backed loader activity:
+
+```bash
+strace -f -e trace=ptrace,memfd_create,openat,wait4 \
+  ./remote_memfd_dlopen/inject --mode disk \
+  --library ./remote_memfd_dlopen/demo_lib.so \
+  --spawn ./remote_memfd_dlopen/victim-process/sample
+strace -f -e trace=ptrace,memfd_create,openat,wait4 \
+  ./remote_memfd_dlopen/inject --mode memfd \
+  --library ./remote_memfd_dlopen/demo_lib.so \
+  --spawn ./remote_memfd_dlopen/victim-process/sample
+```
+
+Both cases have the same attach, patch, register-write, trap, restoration, and
+detach sequence. Memfd mode additionally creates an anonymous file before the
+child starts, opens `/proc/self/fd/<fd>` in the child, and leaves a mapping named
+`memfd:remote-dlopen-demo (deleted)`. Disk mode leaves the ordinary pathname in
+the mapping instead.
+
 ## Audit example
 
 The following host-wide audit rule requires administrative access. Review it
@@ -150,13 +182,14 @@ than ad hoc commands.
 | Primitive | High-signal behavior | Common legitimate sources |
 | --- | --- | --- |
 | ptrace | Attach followed by memory/register modification requests | GDB, debuggers, profilers, crash handlers |
+| restored ptrace execution | Writes and continuation followed by `SIGTRAP`, reverse writes, verification reads, and detach | Debuggers, hot patchers, live instrumentation |
 | `/proc/<pid>/mem` | One process opens and writes another PID's `mem` file | Debuggers, diagnostics, specialized checkpoint tools |
 | exec-time entry stomp | Trace-before-exec followed by writes at initial RIP and immediate changed behavior | Debuggers, instrumentation, test harnesses |
 | `process_vm_writev` | Source and target PIDs differ and the target is not an expected child/tool relationship | MPI/message-passing software, debuggers, compatibility layers |
 | GOT redirection | Remote write lands in a relocation slot and a later indirect call reaches an unusual executable address | Profilers, hot patching, compatibility and instrumentation tools |
 | saved return-address redirection | Remote write lands on a writable stack and a later `ret` reaches an unusual executable address | Debuggers, checkpoint/restore tools, specialized instrumentation |
 | `memfd` plus `dlopen` | Writes to a memfd followed by `/proc/self/fd` access and an executable memory-backed ELF mapping | JIT runtimes, sandboxing, package systems, temporary executable artifacts |
-| remote `dlopen` | ptrace activity followed by a new shared-object mapping | Debuggers, live instrumentation, observability agents |
+| remote `dlopen` | ptrace activity followed by a new file-backed or memfd-backed shared-object mapping | Debuggers, live instrumentation, observability agents |
 | `LD_PRELOAD` | Loader variable plus an unusual early library mapping | Profilers, sanitizers, compatibility shims, test harnesses |
 | `LD_AUDIT` | Loader audit variable, audit namespace mappings, and early audit callbacks | Linker diagnostics, tracing, profiling, and test tools |
 
@@ -170,8 +203,8 @@ than ad hoc commands.
   cases in disposable environments.
 - Compare `got_partial` and `got_full`; verify the destination mapping
   permissions and record the successful redirect versus asserted `EFAULT`.
-- Compare an ordinary file-backed `dlopen` with `memfd_dlopen` and record the
-  differences in file, module-load, and memory-map telemetry.
+- Compare both `remote_memfd_dlopen` modes and record the differences in file,
+  module-load, ptrace, and memory-map telemetry.
 
 Do not automatically weaken Yama, SELinux, AppArmor, or container isolation in
 test scripts. A blocked lab is useful evidence, not a setup failure.

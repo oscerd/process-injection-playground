@@ -10,6 +10,7 @@ injection,” which makes examples difficult to compare.
 | `ptrace_seize` | Existing child | `PTRACE_SEIZE` and `PTRACE_INTERRUPT` | None | Generally architecture-neutral | ptrace seize permitted | Tracee is detached without memory or register changes |
 | `ptrace_traceme` with `SETREGS` | Opt-in child | Register set replaced with `PTRACE_SETREGS` | RIP selects an existing function | x86_64 | Child permits its parent with `PTRACE_TRACEME` | No restoration; selected benign function exits |
 | `ptrace_traceme` with `POKEUSER` | Opt-in child | RIP and RSP user-area fields written individually | RIP selects an existing function | x86_64 | Child permits its parent with `PTRACE_TRACEME` | No restoration; selected benign function exits |
+| `ptrace_restore` | Existing child | Dedicated code slot, data marker, and registers changed with ptrace | Temporary stub writes a marker and traps with `INT3` | x86_64 | Parent-child ptrace attach permitted | Code, marker, and registers are read back and verified before detach; child resumes normally |
 | `process_hollowing` entry stomp | Exec-stopped child | `PTRACE_POKETEXT` replaces bytes at initial RIP | Child continues at the modified entry point | x86_64 | Child requests tracing before `exec` | No restoration; benign replacement exits with marker 42 |
 | `proc_mem` | Existing process | Write to `/proc/<pid>/mem` | RIP changed with `PTRACE_SETREGS` | x86_64 | procfs memory access and ptrace attach permitted | No; target state is overwritten |
 | `proc_mem` read-only marker | Existing child | Positioned write to `/proc/<pid>/mem` | None | Generally architecture-neutral | Ptrace access-mode check permits opening the file; kernel permits force override | Not needed; victim observes benign data and exits |
@@ -21,6 +22,8 @@ injection,” which makes examples difficult to compare.
 | `process_vm_writev` GOT, Full RELRO | Existing child | Denied write to the read-only `puts` jump slot | None | ELF64, non-PIE example | Cross-process access permitted; mapping rejects the write | Not needed; `EFAULT` and unchanged binding are asserted |
 | `process_vm_writev` stack return | Existing child | One saved return address in a live frame | Function epilogue consumes the changed slot with `ret` | x86_64 | ptrace access-mode check permits the writer | No restoration; existing benign callback exits |
 | `dlopen_inject` | Existing process | `PTRACE_POKETEXT` | Temporary stub calls `dlopen` | x86_64, glibc | ptrace attach permitted; compatible libc | Patched instruction bytes and registers are restored; loaded library remains |
+| `remote_memfd_dlopen`, disk | Existing child | Ptrace call stub, pathname storage, and dedicated stack | Remote `dlopen` call and ELF constructor | x86_64, glibc | Parent-child ptrace attach permitted; compatible libc | Patch, path, stack, and registers restored; file-backed library remains loaded |
+| `remote_memfd_dlopen`, memfd | Controlled child inheriting a populated memfd | Same ptrace call stub with `/proc/self/fd/<fd>` | Remote `dlopen` call and ELF constructor | x86_64, glibc | Same ptrace access plus `memfd_create` availability | Patch, path, stack, and registers restored; memfd-backed library remains loaded |
 | `ld_preload` | Controlled launch | ELF dynamic loader | Constructor and symbol resolution | Generally architecture-neutral | Control of the new process environment | Not applicable |
 | `ld_audit` | Controlled launch | GNU runtime-linker audit API | Audit callbacks observe object loading and symbol binding | Common GNU/Linux ABIs | Control of the new process environment | Not applicable; original binding is preserved |
 | `memfd_dlopen` | Current process | `memfd_create`, `/proc/self/fd`, and `dlopen` | Constructor and exported function | Generally architecture-neutral | Ability to create a memfd and load an ELF object | Handle is closed normally; mapping is removed by `dlclose` |
@@ -63,8 +66,7 @@ Security Modules can therefore affect all three approaches.
 
 The most useful next combinations are:
 
-1. Remote `memfd` staging combined with the existing `dlopen` injector.
-2. Reliable save, trap, restore, and detach behavior for the raw-code labs.
-3. Multi-thread targets and signal/syscall interruption.
-4. AArch64 register and instruction-cache handling.
-5. VDSO hijacking as an advanced Linux-specific lab.
+1. Multi-thread targets and signal/syscall interruption.
+2. AArch64 register and instruction-cache handling.
+3. VDSO hijacking as an advanced Linux-specific lab.
+4. A target-created memfd comparison using a reversible remote syscall path.

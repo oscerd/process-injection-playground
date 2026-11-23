@@ -40,3 +40,9 @@ The controlled `proc_mem` lab also shows why mapping permissions and access
 authorization must be reported separately: the parent may be authorized to open
 the memory file and still override a read-only target mapping, depending on the
 kernel's procfs memory force policy.
+
+The remote memfd comparison composes controls from two columns. Ptrace policy
+governs the remote call, while seccomp or an LSM can separately affect memfd
+creation, `/proc/self/fd` access, and executable mappings. Its automated memfd
+is created by the parent before the controlled child starts, so a target-side
+`memfd_create` denial is not exercised by that lab.

@@ -32,6 +32,7 @@ then compare these repository cases:
 | --- | --- | --- | --- |
 | `ptrace_seize` | Yes | No | No |
 | `ptrace_traceme` | Opt-in child tracing | No | RIP selects existing code |
+| `ptrace_restore` | Yes | Temporary code and data | Trap, restore, detach, and resume |
 | entry-point-stomping victim | Exec-time child tracing | Initial code bytes | Resume after the exec stop |
 | marker victim | Yes | Data only | No |
 | function-pointer victim | Yes | Control-flow data | Reuses an existing callback |
@@ -39,6 +40,7 @@ then compare these repository cases:
 | stack-return victim | Yes | One saved return address | Function epilogue executes an existing callback |
 | raw ptrace lab | Yes | Instruction bytes | Changes RIP |
 | `dlopen_inject` | Yes | Temporary call stub and path | Calls the target loader |
+| `remote_memfd_dlopen` | Yes | Temporary call stub, path, and stack | Calls the loader for a disk or memfd path |
 
 This vocabulary prevents a syscall alert, a memory write, and completed code
 execution from being treated as equivalent events.
@@ -60,9 +62,10 @@ Use these in order:
 5. [GNU C Library dynamic-linker hardening](https://sourceware.org/glibc/manual/latest/html_node/Dynamic-Linker-Hardening.html)
    for robustness trade-offs around late loading, interposition, and auditing.
 
-Run `ld_preload`, `ld_audit`, and `memfd_dlopen` after reading this section.
-Record which examples change resolution, merely observe it, or explicitly ask
-the loader to add an object.
+Run `ld_preload`, `ld_audit`, `memfd_dlopen`, and `remote_memfd_dlopen` after
+reading this section. Record which examples change resolution, merely observe
+it, or explicitly ask the loader to add an object. For the remote comparison,
+also record which temporary state is restored and which library mapping remains.
 
 ## 4. Compare implementation research
 

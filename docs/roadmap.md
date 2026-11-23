@@ -19,7 +19,7 @@ fragile injection variants.
 
 ## Reliability and negative cases
 
-- [ ] Add save/trap/restore tests proving that targets remain alive.
+- [x] Add a save/trap/restore test proving that the target remains alive.
 - [x] Add a non-dumpable victim with an asserted denied-access result.
 - [ ] Add denied-access modes for namespaces, seccomp, and LSM policy.
 - [ ] Add multi-threaded and signal-interrupted victims.
@@ -41,7 +41,7 @@ fragile injection variants.
 - [x] Add `PTRACE_SEIZE` and compare its stop behavior with `PTRACE_ATTACH`.
 - [x] Add a non-modifying `LD_AUDIT` loader instrumentation lab.
 - [x] Add in-process `memfd`-backed shared-object staging.
-- [ ] Add an on-disk versus `memfd`-backed remote `dlopen` comparison.
+- [x] Add an on-disk versus inherited-`memfd` remote `dlopen` comparison.
 - [ ] Add a VDSO hijacking lab mapped to T1055.014.
 - [ ] Add a GDB-based example as a legitimate-tool comparison.
 - [ ] Add seccomp user-notification as an experimental controlled-launch lab.
