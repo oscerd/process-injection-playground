@@ -35,6 +35,7 @@ then compare these repository cases:
 | marker victim | Yes | Data only | No |
 | function-pointer victim | Yes | Control-flow data | Reuses an existing callback |
 | GOT victim | Yes | One ELF jump slot | Reuses an existing callback |
+| stack-return victim | Yes | One saved return address | Function epilogue executes an existing callback |
 | raw ptrace lab | Yes | Instruction bytes | Changes RIP |
 | `dlopen_inject` | Yes | Temporary call stub and path | Calls the target loader |
 

@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <inttypes.h>
+#include <stddef.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -16,6 +17,11 @@
 #if !defined(__x86_64__)
 #error "This register-redirection lab currently supports x86_64 only"
 #endif
+
+enum redirect_mode {
+    REDIRECT_SETREGS,
+    REDIRECT_POKEUSER,
+};
 
 static int read_exact(int fd, void *buffer, size_t length) {
     size_t consumed = 0;
@@ -59,7 +65,18 @@ static int child_result(pid_t child) {
     return EXIT_SUCCESS;
 }
 
-static int run_demo(const char *victim_program) {
+static int poke_user_register(pid_t child, size_t offset, uint64_t value,
+                              const char *register_name) {
+    if (ptrace(PTRACE_POKEUSER, child, (void *)(uintptr_t)offset,
+               (void *)(uintptr_t)value) != 0) {
+        fprintf(stderr, "PTRACE_POKEUSER %s: %s\n", register_name,
+                strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+static int run_demo(const char *victim_program, enum redirect_mode mode) {
     int request_pipe[2];
     if (pipe(request_pipe) != 0) {
         perror("pipe");
@@ -129,13 +146,30 @@ static int run_demo(const char *victim_program) {
     printf("[*] Original RIP: 0x%" PRIx64 "\n", (uint64_t)registers.rip);
     printf("[*] Redirect target: 0x%" PRIxPTR "\n",
            request.target_address);
-    registers.rip = request.target_address;
-    registers.rsp = (registers.rsp & ~UINT64_C(0xf)) - UINT64_C(8);
+    uint64_t aligned_stack =
+        (registers.rsp & ~UINT64_C(0xf)) - UINT64_C(8);
 
-    if (ptrace(PTRACE_SETREGS, child, NULL, &registers) != 0) {
-        perror("PTRACE_SETREGS");
-        terminate_child(child);
-        return EXIT_FAILURE;
+    if (mode == REDIRECT_SETREGS) {
+        registers.rip = request.target_address;
+        registers.rsp = aligned_stack;
+        if (ptrace(PTRACE_SETREGS, child, NULL, &registers) != 0) {
+            perror("PTRACE_SETREGS");
+            terminate_child(child);
+            return EXIT_FAILURE;
+        }
+        puts("[+] PTRACE_SETREGS updated RIP and RSP");
+    } else {
+        size_t rip_offset = offsetof(struct user, regs) +
+                            offsetof(struct user_regs_struct, rip);
+        size_t rsp_offset = offsetof(struct user, regs) +
+                            offsetof(struct user_regs_struct, rsp);
+        if (poke_user_register(child, rip_offset, request.target_address,
+                               "RIP") != 0 ||
+            poke_user_register(child, rsp_offset, aligned_stack, "RSP") != 0) {
+            terminate_child(child);
+            return EXIT_FAILURE;
+        }
+        puts("[+] PTRACE_POKEUSER updated RIP and RSP individually");
     }
     puts("[+] RIP now points to an existing benign function in the victim");
 
@@ -153,10 +187,23 @@ static int run_demo(const char *victim_program) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 3 || strcmp(argv[1], "--spawn") != 0) {
-        fprintf(stderr, "Usage: %s --spawn <victim-program>\n", argv[0]);
+    enum redirect_mode mode = REDIRECT_SETREGS;
+    const char *victim_program = NULL;
+
+    if (argc == 3 && strcmp(argv[1], "--spawn") == 0) {
+        victim_program = argv[2];
+    } else if (argc == 4 && strcmp(argv[1], "--pokeuser") == 0 &&
+               strcmp(argv[2], "--spawn") == 0) {
+        mode = REDIRECT_POKEUSER;
+        victim_program = argv[3];
+    } else {
+        fprintf(stderr,
+                "Usage:\n"
+                "  %s --spawn <victim-program>\n"
+                "  %s --pokeuser --spawn <victim-program>\n",
+                argv[0], argv[0]);
         return EXIT_FAILURE;
     }
 
-    return run_demo(argv[2]);
+    return run_demo(victim_program, mode);
 }

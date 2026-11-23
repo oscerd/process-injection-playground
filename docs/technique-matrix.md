@@ -8,13 +8,15 @@ injection,” which makes examples difficult to compare.
 | --- | --- | --- | --- | --- | --- | --- |
 | `ptrace` | Existing process | `PTRACE_POKETEXT` | RIP changed with `PTRACE_SETREGS` | x86_64 | ptrace attach permitted | No; target state is overwritten |
 | `ptrace_seize` | Existing child | `PTRACE_SEIZE` and `PTRACE_INTERRUPT` | None | Generally architecture-neutral | ptrace seize permitted | Tracee is detached without memory or register changes |
-| `ptrace_traceme` | Opt-in child | No remote memory write | RIP changed with `PTRACE_SETREGS` | x86_64 | Child permits its parent with `PTRACE_TRACEME` | No restoration; selected benign function exits |
+| `ptrace_traceme` with `SETREGS` | Opt-in child | Register set replaced with `PTRACE_SETREGS` | RIP selects an existing function | x86_64 | Child permits its parent with `PTRACE_TRACEME` | No restoration; selected benign function exits |
+| `ptrace_traceme` with `POKEUSER` | Opt-in child | RIP and RSP user-area fields written individually | RIP selects an existing function | x86_64 | Child permits its parent with `PTRACE_TRACEME` | No restoration; selected benign function exits |
 | `proc_mem` | Existing process | Write to `/proc/<pid>/mem` | RIP changed with `PTRACE_SETREGS` | x86_64 | procfs memory access and ptrace attach permitted | No; target state is overwritten |
 | `process_vm_writev` marker | Existing child or permitted PID | `process_vm_writev` into writable data | None | Architecture-neutral | ptrace access-mode check permits the writer | Not needed; target observes a data marker and exits normally |
 | `process_vm_writev` function pointer | Existing child | `process_vm_writev` into writable data | Target's next indirect call | Common Linux ABIs | ptrace access-mode check permits the writer | Not needed; target executes a pre-existing benign callback and exits normally |
 | `process_vm_writev` non-dumpable | Existing child | Denied `process_vm_writev` attempt | None | Architecture-neutral | Target opts out with `PR_SET_DUMPABLE=0` | Not needed; denial and unchanged marker are asserted |
 | `process_vm_writev` GOT, Partial RELRO | Existing child | Targeted write to the `puts` jump slot | Target's next `puts` call | ELF64, non-PIE example | Cross-process access permitted and jump slot remains writable | Not needed; target executes a pre-existing benign callback and exits normally |
 | `process_vm_writev` GOT, Full RELRO | Existing child | Denied write to the read-only `puts` jump slot | None | ELF64, non-PIE example | Cross-process access permitted; mapping rejects the write | Not needed; `EFAULT` and unchanged binding are asserted |
+| `process_vm_writev` stack return | Existing child | One saved return address in a live frame | Function epilogue consumes the changed slot with `ret` | x86_64 | ptrace access-mode check permits the writer | No restoration; existing benign callback exits |
 | `dlopen_inject` | Existing process | `PTRACE_POKETEXT` | Temporary stub calls `dlopen` | x86_64, glibc | ptrace attach permitted; compatible libc | Patched instruction bytes and registers are restored; loaded library remains |
 | `ld_preload` | Controlled launch | ELF dynamic loader | Constructor and symbol resolution | Generally architecture-neutral | Control of the new process environment | Not applicable |
 | `ld_audit` | Controlled launch | GNU runtime-linker audit API | Audit callbacks observe object loading and symbol binding | Common GNU/Linux ABIs | Control of the new process environment | Not applicable; original binding is preserved |
@@ -53,9 +55,8 @@ Security Modules can therefore affect all three approaches.
 
 The most useful next combinations are:
 
-1. Stack return-address overwrite against a controlled child.
-2. Remote `memfd` staging combined with the existing `dlopen` injector.
-3. Reliable save, trap, restore, and detach behavior for the raw-code labs.
-4. Multi-thread targets and signal/syscall interruption.
-5. AArch64 register and instruction-cache handling.
-6. VDSO hijacking as an advanced Linux-specific lab.
+1. Remote `memfd` staging combined with the existing `dlopen` injector.
+2. Reliable save, trap, restore, and detach behavior for the raw-code labs.
+3. Multi-thread targets and signal/syscall interruption.
+4. AArch64 register and instruction-cache handling.
+5. VDSO hijacking as an advanced Linux-specific lab.

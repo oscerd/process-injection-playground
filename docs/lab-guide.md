@@ -51,6 +51,8 @@ Use the `process_vm_writev` victims in this order:
 4. `got_partial`: parse the dynamic table and replace one writable jump slot.
 5. `got_full`: repeat the exact target selection and assert that the read-only
    mapping rejects the write.
+6. `stack_return`: replace a saved return address in a known live frame and
+   compare the `ret` trigger with the earlier indirect-call triggers.
 
 This separates access policy, remote writing, and execution redirection into
 independently observable steps.
@@ -66,6 +68,8 @@ pair demonstrates that:
 - detection should inspect request types and sequences.
 - a child can opt into tracing, after which `PTRACE_SETREGS` can redirect RIP
   without staging new code.
+- `PTRACE_POKEUSER` can produce the same final RIP and RSP values through
+  separate architecture-specific user-area writes.
 
 Then compare it with `ptrace`, which adds memory writes and register changes.
 

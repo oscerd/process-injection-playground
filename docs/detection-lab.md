@@ -56,12 +56,16 @@ Now compare the opt-in execution-redirection sequence:
 strace -f -e trace=ptrace,wait4 \
   ./ptrace_traceme/redirector --spawn \
   ./ptrace_traceme/victim-process/sample
+strace -f -e trace=ptrace,wait4 \
+  ./ptrace_traceme/redirector --pokeuser --spawn \
+  ./ptrace_traceme/victim-process/sample
 ```
 
 The child first issues `PTRACE_TRACEME`. After its deliberate stop, the parent
-uses `PTRACE_GETREGS`, `PTRACE_SETREGS`, and `PTRACE_CONT`. There is no poke
-request or new executable mapping, but RIP changes to an existing function in
-the victim.
+uses `PTRACE_GETREGS`, a register-write primitive, and `PTRACE_CONT`. One run
+replaces the register set with `PTRACE_SETREGS`; the other writes RIP and RSP
+individually with `PTRACE_POKEUSER`. Neither run adds an executable mapping, but
+RIP changes to an existing function in the victim.
 
 The negative remote-write case is also executable:
 
@@ -86,6 +90,18 @@ The first write changes only the resolved `puts` jump slot. The second reaches
 the same stage but receives `EFAULT` because Full RELRO made that slot read-only.
 If an outer access policy returns `EPERM` first, the test reports a skip because
 that policy masks the mapping-permission experiment.
+
+The saved-return-address example has the same remote-write syscall but a
+different destination and trigger:
+
+```bash
+./process_vm_writev/inject --spawn \
+  ./process_vm_writev/victim-process/stack_return
+```
+
+The remote address is inside the victim's writable stack. Execution changes
+later when a normal function epilogue consumes that value with `ret`; there is
+no new executable mapping or register-write syscall.
 
 ## Audit example
 
@@ -112,6 +128,7 @@ than ad hoc commands.
 | `/proc/<pid>/mem` | One process opens and writes another PID's `mem` file | Debuggers, diagnostics, specialized checkpoint tools |
 | `process_vm_writev` | Source and target PIDs differ and the target is not an expected child/tool relationship | MPI/message-passing software, debuggers, compatibility layers |
 | GOT redirection | Remote write lands in a relocation slot and a later indirect call reaches an unusual executable address | Profilers, hot patching, compatibility and instrumentation tools |
+| saved return-address redirection | Remote write lands on a writable stack and a later `ret` reaches an unusual executable address | Debuggers, checkpoint/restore tools, specialized instrumentation |
 | `memfd` plus `dlopen` | Writes to a memfd followed by `/proc/self/fd` access and an executable memory-backed ELF mapping | JIT runtimes, sandboxing, package systems, temporary executable artifacts |
 | remote `dlopen` | ptrace activity followed by a new shared-object mapping | Debuggers, live instrumentation, observability agents |
 | `LD_PRELOAD` | Loader variable plus an unusual early library mapping | Profilers, sanitizers, compatibility shims, test harnesses |

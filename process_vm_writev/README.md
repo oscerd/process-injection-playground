@@ -4,7 +4,7 @@ This lab demonstrates `process_vm_writev(2)`, one of the three main Linux
 interfaces used to modify another process alongside `ptrace` writes and
 `/proc/<pid>/mem`.
 
-The directory contains five controlled victims:
+The directory contains six controlled victims:
 
 1. `sample` receives a benign 64-bit marker in a writable global variable. It
    demonstrates the remote-memory write primitive without redirecting execution.
@@ -20,6 +20,9 @@ The directory contains five controlled victims:
 5. `got_full` uses the same source compiled with Full RELRO and immediate
    binding. The expected `EFAULT` result and unchanged jump slot are both
    asserted.
+6. `stack_return` identifies one live saved return-address slot in a dedicated
+   frame. The parent replaces it with an existing benign trampoline, and the
+   victim triggers the redirect by returning normally.
 
 This distinction matters: `process_vm_writev` is a **write primitive**. A full
 process-injection chain also needs an execution trigger such as register, stack,
@@ -54,6 +57,7 @@ Protected marker remained unchanged
 [GOT REDIRECTED] Existing benign callback executed
 [FULL RELRO] puts jump slot remained unchanged
 [+] Kernel rejected the write with Bad address as expected
+[STACK REDIRECTED] Saved return address selected a benign callback
 [+] Victim confirmed the requested behavior
 ```
 
@@ -61,6 +65,11 @@ The GOT pair is an ELF64, non-PIE teaching example. It intentionally targets one
 named relocation rather than scanning or overwriting a broad range of pointers.
 The in-memory parser demonstrates how `DT_JMPREL`, `DT_SYMTAB`, and `DT_STRTAB`
 connect a symbol name to its jump slot.
+
+The stack example is x86_64-specific and compiled with a frame pointer so the
+saved return slot has a deterministic contract. A small existing trampoline
+preserves the System V stack alignment before calling the benign callback. It
+does not stage executable bytes or scan arbitrary stack contents.
 
 ## Manual mode
 
@@ -88,6 +97,8 @@ than weakening the host's policy.
   bytes; both possible callback functions were compiled into the target.
 - The Partial RELRO victim changes one dynamic-linker control-flow slot. The
   Full RELRO victim turns the same request into an executable negative test.
+- The stack victim changes a control-flow value consumed by `ret`, illustrating
+  a different execution trigger from an indirect function call or GOT lookup.
 - The destination must be writable; unlike `/proc/<pid>/mem` and some ptrace
   requests, this interface respects the target mapping's permissions.
 - Access is still governed by a ptrace access-mode check and can fail with

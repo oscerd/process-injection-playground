@@ -32,7 +32,8 @@ fragile injection variants.
 - [x] Compose `process_vm_writev` with a separately testable execution trigger.
 - [x] Add a targeted GOT overwrite lab and Full RELRO blocked case.
 - [x] Add an opt-in `PTRACE_TRACEME` register-redirection lab.
-- [ ] Add a controlled stack return-address overwrite lab.
+- [x] Compare `PTRACE_SETREGS` with targeted `PTRACE_POKEUSER` writes.
+- [x] Add a controlled stack return-address overwrite lab.
 - [x] Add `PTRACE_SEIZE` and compare its stop behavior with `PTRACE_ATTACH`.
 - [x] Add a non-modifying `LD_AUDIT` loader instrumentation lab.
 - [x] Add in-process `memfd`-backed shared-object staging.

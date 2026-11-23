@@ -6,7 +6,7 @@ CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -O2 -g
 
 VICTIMS := victim-process/sample victim-process/function_pointer \
 	victim-process/non_dumpable victim-process/got_partial \
-	victim-process/got_full
+	victim-process/got_full victim-process/stack_return
 
 all: inject $(VICTIMS)
 
@@ -29,6 +29,10 @@ victim-process/got_partial: victim-process/got_overwrite.c demo_protocol.h
 victim-process/got_full: victim-process/got_overwrite.c demo_protocol.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) -DFULL_RELRO -fno-pie -fno-builtin-puts \
 		-no-pie -Wl,-z,relro,-z,now -o $@ $<
+
+victim-process/stack_return: victim-process/stack_return.c demo_protocol.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -fno-pie -fno-omit-frame-pointer \
+		-fno-optimize-sibling-calls -fno-stack-protector -no-pie -o $@ $<
 
 test: all
 	@set -e; for victim in $(VICTIMS); do \
