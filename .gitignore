@@ -3,6 +3,7 @@
 /*/observer
 /*/redirector
 /*/controlled_writer
+/*/hollower
 /*/*.so
 /*/victim-process/sample
 /process_vm_writev/victim-process/function_pointer

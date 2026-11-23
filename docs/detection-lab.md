@@ -116,6 +116,18 @@ case can succeed through the kernel's configured force-override behavior, while
 `process_vm_writev` returns `EFAULT`. Then run the procfs `non_dumpable` victim
 to show that target authorization is still checked before mapping permissions.
 
+Observe the exec-time entry replacement separately:
+
+```bash
+strace -f -e trace=ptrace,execve,wait4 \
+  ./process_hollowing/hollower --spawn \
+  ./process_hollowing/victim-process/sample
+```
+
+The high-signal sequence is `PTRACE_TRACEME`, `execve`, an exec-time stop,
+`PTRACE_GETREGS`, `PTRACE_POKETEXT`, and continuation. A debugger can share much
+of that lifecycle, so verify that the entry bytes diverge from the backing file.
+
 ## Audit example
 
 The following host-wide audit rule requires administrative access. Review it
@@ -139,6 +151,7 @@ than ad hoc commands.
 | --- | --- | --- |
 | ptrace | Attach followed by memory/register modification requests | GDB, debuggers, profilers, crash handlers |
 | `/proc/<pid>/mem` | One process opens and writes another PID's `mem` file | Debuggers, diagnostics, specialized checkpoint tools |
+| exec-time entry stomp | Trace-before-exec followed by writes at initial RIP and immediate changed behavior | Debuggers, instrumentation, test harnesses |
 | `process_vm_writev` | Source and target PIDs differ and the target is not an expected child/tool relationship | MPI/message-passing software, debuggers, compatibility layers |
 | GOT redirection | Remote write lands in a relocation slot and a later indirect call reaches an unusual executable address | Profilers, hot patching, compatibility and instrumentation tools |
 | saved return-address redirection | Remote write lands on a writable stack and a later `ret` reaches an unusual executable address | Debuggers, checkpoint/restore tools, specialized instrumentation |

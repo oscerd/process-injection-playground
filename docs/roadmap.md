@@ -34,6 +34,7 @@ fragile injection variants.
 - [x] Add an opt-in `PTRACE_TRACEME` register-redirection lab.
 - [x] Compare `PTRACE_SETREGS` with targeted `PTRACE_POKEUSER` writes.
 - [x] Add a controlled stack return-address overwrite lab.
+- [x] Add a controlled exec-time entry-point-stomping hollowing analogue.
 - [x] Add a procfs read-only mapping write and non-dumpable denial pair.
 - [x] Add `PTRACE_SEIZE` and compare its stop behavior with `PTRACE_ATTACH`.
 - [x] Add a non-modifying `LD_AUDIT` loader instrumentation lab.

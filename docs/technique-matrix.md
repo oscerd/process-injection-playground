@@ -10,6 +10,7 @@ injection,” which makes examples difficult to compare.
 | `ptrace_seize` | Existing child | `PTRACE_SEIZE` and `PTRACE_INTERRUPT` | None | Generally architecture-neutral | ptrace seize permitted | Tracee is detached without memory or register changes |
 | `ptrace_traceme` with `SETREGS` | Opt-in child | Register set replaced with `PTRACE_SETREGS` | RIP selects an existing function | x86_64 | Child permits its parent with `PTRACE_TRACEME` | No restoration; selected benign function exits |
 | `ptrace_traceme` with `POKEUSER` | Opt-in child | RIP and RSP user-area fields written individually | RIP selects an existing function | x86_64 | Child permits its parent with `PTRACE_TRACEME` | No restoration; selected benign function exits |
+| `process_hollowing` entry stomp | Exec-stopped child | `PTRACE_POKETEXT` replaces bytes at initial RIP | Child continues at the modified entry point | x86_64 | Child requests tracing before `exec` | No restoration; benign replacement exits with marker 42 |
 | `proc_mem` | Existing process | Write to `/proc/<pid>/mem` | RIP changed with `PTRACE_SETREGS` | x86_64 | procfs memory access and ptrace attach permitted | No; target state is overwritten |
 | `proc_mem` read-only marker | Existing child | Positioned write to `/proc/<pid>/mem` | None | Generally architecture-neutral | Ptrace access-mode check permits opening the file; kernel permits force override | Not needed; victim observes benign data and exits |
 | `proc_mem` non-dumpable | Existing child | Denied open of `/proc/<pid>/mem` | None | Generally architecture-neutral | Target opts out with `PR_SET_DUMPABLE=0` | Not needed; denial and unchanged marker are asserted |
@@ -28,6 +29,11 @@ injection,” which makes examples difficult to compare.
 
 - Ptrace-based modification maps directly to
   [T1055.008, Ptrace System Calls](https://attack.mitre.org/techniques/T1055/008/).
+- The `process_hollowing` lab is a Linux entry-point-stomping analogue built
+  from ptrace operations. MITRE's
+  [T1055.012, Process Hollowing](https://attack.mitre.org/techniques/T1055/012/)
+  procedures and detection strategy are Windows-oriented, so do not claim an
+  exact mapping without describing the Linux lifecycle.
 - `/proc/<pid>/mem` manipulation maps to
   [T1055.009, Proc Memory](https://attack.mitre.org/techniques/T1055/009/).
 - `process_vm_writev` does not currently have a dedicated ATT&CK sub-technique;

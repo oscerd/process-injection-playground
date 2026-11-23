@@ -7,6 +7,7 @@ mechanism and its defensive implications.
 
 - [MITRE ATT&CK: Process Injection (T1055)](https://attack.mitre.org/techniques/T1055/)
 - [MITRE ATT&CK: Ptrace System Calls (T1055.008)](https://attack.mitre.org/techniques/T1055/008/)
+- [MITRE ATT&CK: Process Hollowing (T1055.012)](https://attack.mitre.org/techniques/T1055/012/)
 - [MITRE ATT&CK: Proc Memory (T1055.009)](https://attack.mitre.org/techniques/T1055/009/)
 - [MITRE ATT&CK: VDSO Hijacking (T1055.014)](https://attack.mitre.org/techniques/T1055/014/)
 - [MITRE ATT&CK: Dynamic Linker Hijacking (T1574.006)](https://attack.mitre.org/techniques/T1574/006/)
@@ -33,6 +34,7 @@ see the [annotated reading guide](reading-guide.md).
 - Ori David, [The Definitive Guide to Linux Process Injection](https://www.akamai.com/blog/security-research/the-definitive-guide-to-linux-process-injection), 2024.
 - Akamai, [Linux-Process-Injection reference implementations](https://github.com/akamai/Linux-Process-Injection).
 - Philippe Grégoire, [linux-prinj proof-of-concept series](https://github.com/antifob/linux-prinj).
+- Philippe Grégoire, [Linux process hollowing example](https://github.com/antifob/linux-prinj/tree/main/04-hollowing).
 - f0b, [Linux Process Injection series](https://blog.f0b.org/p/linux-process-injection-part2/), 2021.
 - Rory McNamara, [Linux Based Inter-Process Code Injection Without Ptrace](https://www.levelblue.com/blogs/spiderlabs-blog/linux-based-inter-process-code-injection-without-ptrace-2/), 2017.
 - rb, [Pure In-Memory (Shell)Code Injection in Linux Userland](https://deepsec.net/docs/Slides/2018/Pure_In-Memory_%28Shell%29Code_Injection_in_Linux_Userland_reenz0h.pdf), DeepSec 2018.

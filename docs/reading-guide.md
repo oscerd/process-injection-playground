@@ -32,6 +32,7 @@ then compare these repository cases:
 | --- | --- | --- | --- |
 | `ptrace_seize` | Yes | No | No |
 | `ptrace_traceme` | Opt-in child tracing | No | RIP selects existing code |
+| entry-point-stomping victim | Exec-time child tracing | Initial code bytes | Resume after the exec stop |
 | marker victim | Yes | Data only | No |
 | function-pointer victim | Yes | Control-flow data | Reuses an existing callback |
 | GOT victim | Yes | One ELF jump slot | Reuses an existing callback |
