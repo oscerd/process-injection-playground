@@ -51,6 +51,11 @@ see the [annotated reading guide](reading-guide.md).
 - [Atomic Red Team T1055.009: Proc Memory](https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1055.009/T1055.009.md)
 - [Red Canary: Process Injection](https://redcanary.com/threat-detection-report/techniques/process-injection/)
 - [Elastic: Linux Process Hooking via GDB](https://www.elastic.co/docs/reference/security/prebuilt-rules/rules/linux/credential_access_gdb_process_hooking)
+- [Elastic Global Threat Report 2025](https://www.elastic.co/pdf/elastic-global-threat-report-2025)
+- [Elastic: Declawing PUMAKIT](https://security-labs.elastic.co/security-labs/declawing-pumakit)
+- [Intezer: OrBit](https://research.intezer.com/blog/2022/07/orbit-new-undetected-linux-threat/)
+- [Intezer: OrBit Returns](https://intezer.com/blog/orbit-returns)
+- [ESET: FontOnLake](https://www.welivesecurity.com/2021/10/07/fontonlake-previously-unknown-malware-family-targeting-linux/)
 
 ## How to extend this list
 

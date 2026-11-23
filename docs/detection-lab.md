@@ -175,3 +175,6 @@ than ad hoc commands.
 
 Do not automatically weaken Yama, SELinux, AppArmor, or container isolation in
 test scripts. A blocked lab is useful evidence, not a setup failure.
+
+For examples of how to distinguish confirmed incidents from PoCs and analytic
+coverage, see [Observed Use, Reporting, and Process Hollowing](field-reporting.md).

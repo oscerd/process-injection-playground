@@ -86,6 +86,7 @@ process. Keeping those distinctions visible is a core goal of this playground.
 - [Guided learning path](docs/lab-guide.md)
 - [Annotated reading guide](docs/reading-guide.md)
 - [Literature and PoC coverage map](docs/literature-map.md)
+- [Observed use, reporting, and hollowing](docs/field-reporting.md)
 - [Glossary](docs/glossary.md)
 - [Mitigation matrix](docs/mitigation-matrix.md)
 - [Detection lab](docs/detection-lab.md)

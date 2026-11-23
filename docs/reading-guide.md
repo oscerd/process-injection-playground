@@ -86,6 +86,10 @@ The [literature and PoC coverage map](literature-map.md) records which ideas are
 already represented, which were deliberately narrowed, and which remain future
 work.
 
+The [field-reporting guide](field-reporting.md) separates confirmed telemetry,
+named malware analysis, PoCs, and detection research, and explains the narrower
+meaning of Linux process hollowing examples.
+
 Treat implementation articles as environment-specific starting points. Check
 their architecture, kernel, libc, compiler, and security-control assumptions
 before reproducing a result.

@@ -10,6 +10,8 @@ fragile injection variants.
 - [x] Document lifecycle, write primitive, execution trigger, and recovery
       separately.
 - [x] Add curated research and an initial detection lab.
+- [x] Separate field observations, malware analysis, PoCs, and detection-only
+      reporting.
 - [ ] Replace duplicated `/proc/<pid>/maps`, PID parsing, and ptrace helpers with
       a small shared library.
 - [ ] Standardize every lab on `make`, `make test`, and `make clean`.
