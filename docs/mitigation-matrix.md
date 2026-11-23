@@ -35,3 +35,8 @@ therefore correlate:
 The non-dumpable victim asserts an access-policy denial. The Full RELRO victim
 asserts a mapping-permission failure after access is granted. Future labs should
 add asserted denials for seccomp and namespace boundaries.
+
+The controlled `proc_mem` lab also shows why mapping permissions and access
+authorization must be reported separately: the parent may be authorized to open
+the memory file and still override a read-only target mapping, depending on the
+kernel's procfs memory force policy.

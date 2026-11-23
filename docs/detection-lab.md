@@ -103,6 +103,19 @@ The remote address is inside the victim's writable stack. Execution changes
 later when a normal function epilogue consumes that value with `ret`; there is
 no new executable mapping or register-write syscall.
 
+Compare remote-write behavior on a read-only data page:
+
+```bash
+./proc_mem/controlled_writer --spawn ./proc_mem/victim-process/read_only
+./process_vm_writev/inject --spawn \
+  ./process_vm_writev/victim-process/got_full
+```
+
+The destinations are different, but both are read-only mappings. The procfs
+case can succeed through the kernel's configured force-override behavior, while
+`process_vm_writev` returns `EFAULT`. Then run the procfs `non_dumpable` victim
+to show that target authorization is still checked before mapping permissions.
+
 ## Audit example
 
 The following host-wide audit rule requires administrative access. Review it

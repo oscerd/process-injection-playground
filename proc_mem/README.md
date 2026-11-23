@@ -1,158 +1,83 @@
-# /proc/mem Process Injection
+# `/proc/<pid>/mem` Remote Writes
 
-## Overview
+This directory now contains two forms of the procfs memory technique:
 
-This technique demonstrates process injection by directly writing to `/proc/<pid>/mem`, which is a file that represents the entire address space of a process. Unlike ptrace-based memory writes (PTRACE_POKETEXT), this method writes directly to the memory file.
+- a deterministic controlled-child lab with benign data and an asserted denial;
+- the original manual x86_64 raw-code example, retained for comparison but not
+  executed by the automated test suite.
 
-## How It Works
+## Controlled read-only mapping lab
 
-1. **Attach with ptrace**: Use `PTRACE_ATTACH` to pause the target process
-2. **Find executable region**: Parse `/proc/<pid>/maps` to find a suitable memory region with execute permissions
-3. **Open /proc/mem**: Open `/proc/<pid>/mem` for reading and writing
-4. **Write shellcode**: Use `lseek()` + `write()` to inject shellcode at the target address
-5. **Redirect execution**: Modify the instruction pointer (RIP) to point to shellcode
-6. **Detach**: Let the process continue with injected code
+The safe lab separates two controls that are often conflated:
 
-## Requirements
+1. `read_only` creates an anonymous page, stores a zero marker, and changes the
+   mapping to `PROT_READ` with `mprotect`.
+2. Its parent opens `/proc/<pid>/mem` and uses `pwrite` at the announced address.
+3. On kernels that permit the procfs force override, the marker changes despite
+   the target mapping being read-only.
+4. `non_dumpable` repeats the setup after `PR_SET_DUMPABLE=0`; opening its memory
+   file must fail with `EACCES` or `EPERM`, and the victim confirms that the
+   marker remains unchanged.
 
-- Root privileges or `CAP_SYS_PTRACE` capability
-- Kernel must support `/proc/<pid>/mem` access (enabled by default on most modern systems)
-- Target process must not be running as root (unless injector is also root)
-
-## Building
-
-```bash
-make all
-```
-
-This creates:
-- `inject` - The injection tool
-- `victim-process/sample` - The victim process
-
-## Usage
-
-### Step 1: Start the victim process
+Build and run both cases:
 
 ```bash
-./victim-process/sample
+make
+make test
 ```
 
-The victim will print its PID. Example output:
-```
-Victim Process Started
-PID: 12345
-Waiting for injection...
-```
+Expected output includes:
 
-### Step 2: Inject shellcode
-
-In another terminal:
-
-```bash
-sudo ./inject <victim_pid>
+```text
+[+] Wrote 8 bytes through /proc/.../mem ...
+[VICTIM] Marker changed despite the read-only mapping
+open /proc/.../mem: Permission denied
+[+] Kernel denied non-dumpable procfs memory access as expected
 ```
 
-Example:
-```bash
-sudo ./inject 12345
-```
+The test creates its own direct children. It does not require root under common
+Yama mode 1 configurations and never changes host security policy. A kernel,
+container, or LSM policy that disables the procfs memory override produces a
+skip for the positive case instead of weakening that policy.
 
-### Expected Output
+## Why this differs from `process_vm_writev`
 
-**Injector output:**
-```
-=== /proc/mem Process Injection ===
-[*] Target PID: 12345
-[*] Attaching to process 12345...
-[+] Attached successfully
-[+] Found executable region: 0x7ffff7dd5000-0x7ffff7dfc000 (r-x)
-[*] Injection address: 0x7ffff7dd5000
-[*] Writing shellcode via /proc/12345/mem...
-[+] Wrote 30 bytes of shellcode
-[+] RIP redirected to 0x7ffff7dd5000
-[*] Detaching and executing shellcode...
-[+] Injection complete!
+| Property | `/proc/<pid>/mem` controlled lab | `process_vm_writev` lab |
+| --- | --- | --- |
+| Cross-process authorization | Ptrace access-mode check while opening the memory file | Ptrace access-mode check on the syscall |
+| Read-only target mapping | May be overridden by procfs forced access policy | Write fails with `EFAULT` |
+| Data transport | `open` plus positioned file write | Remote and local iovec arrays |
+| Execution trigger | None in the controlled case | Separate function-pointer, GOT, and stack examples |
 
-[SUCCESS] Shellcode injected and executed!
-[INFO] Check the victim process - it should now have a shell
-```
+Current Linux kernel source makes the forced behavior configurable through the
+procfs memory implementation. The observable result is therefore more useful
+than assuming that every kernel behaves identically.
 
-**Victim process:**
-The victim process terminal will now have a shell spawned within it.
+## Detection notes
 
-## Technical Details
+- Correlate a process opening another PID's `mem` file with later positioned
+  writes.
+- Record source and target ancestry, credentials, namespaces, and dumpability.
+- A write into a mapping shown as read-only is a particularly useful signal.
+- Debuggers, checkpoint/restore systems, and diagnostics are legitimate users.
+- No `PTRACE_ATTACH` syscall is needed when the parent-child access relationship
+  already permits opening the file.
 
-### Memory Layout
+## Original raw-code example
 
-The injector parses `/proc/<pid>/maps` to find suitable injection points:
+The `inject` binary is the original manual demonstration. It attaches to a PID,
+overwrites bytes at the start of an executable mapping, changes RIP, and does
+not restore the target. Its payload launches a shell.
 
-```
-7ffff7dd5000-7ffff7dfc000 r-xp 00000000 08:01 12345  /lib/x86_64-linux-gnu/ld-2.31.so
-```
-
-Fields:
-- `7ffff7dd5000-7ffff7dfc000`: Address range
-- `r-xp`: Permissions (read, execute, private)
-- We look for regions with `r-x` permissions
-
-### Shellcode
-
-The included shellcode executes:
-```c
-execve("/bin/sh", NULL, NULL);
-```
-
-This spawns a shell in the context of the victim process.
-
-### /proc/mem Access
-
-- `/proc/<pid>/mem` represents the entire virtual address space
-- Must use `lseek()` to position at the correct offset before writing
-- Requires ptrace attachment to write to another process's memory
-- More direct than PTRACE_POKETEXT which copies word-by-word
-
-## Detection and Prevention
-
-**Detection:**
-- Monitor ptrace attach attempts
-- Watch for suspicious `/proc/<pid>/mem` access
-- Use tools like `auditd` to log process tracing
-- Check for unexpected changes in process memory maps
-
-**Prevention:**
-- Enable Yama ptrace_scope: `echo 1 > /proc/sys/kernel/yama/ptrace_scope`
-- Use SELinux or AppArmor to restrict ptrace
-- Enable kernel security modules
-- Use address space layout randomization (ASLR)
-- Implement runtime integrity checking
-
-## Troubleshooting
-
-### Permission denied on /proc/mem
-
-- Ensure you're running as root or have `CAP_SYS_PTRACE`
-- Check Yama ptrace_scope: `cat /proc/sys/kernel/yama/ptrace_scope`
-- If scope is 1, temporarily set to 0: `echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope`
-
-### Failed to find executable region
-
-- The victim process may not have suitable memory regions
-- Try running the victim with different libraries loaded
-
-### Write to /proc/mem fails
-
-- Some kernels restrict /proc/mem writes
-- Ensure ptrace is attached before opening /proc/mem
-- Check kernel version and configuration
-
-## Cleanup
-
-```bash
-make clean
-```
+It is intentionally excluded from `make test`. Use it only in an isolated
+disposable environment against the included legacy victim. The controlled lab
+is the recommended default because it is deterministic, benign, and asserts
+both success and denial behavior.
 
 ## References
 
-- `man 5 proc` - Documentation for /proc filesystem
-- `man 2 ptrace` - Process tracing system call
-- Linux kernel source: `fs/proc/base.c` - Implementation of /proc/mem
+- [`/proc/<pid>/mem`](https://man7.org/linux/man-pages/man5/proc_pid_mem.5.html)
+- [Linux kernel `fs/proc/base.c`](https://github.com/torvalds/linux/blob/master/fs/proc/base.c)
+- [Linux kernel procfs documentation](https://www.kernel.org/doc/html/latest/filesystems/proc.html)
+- [Akamai Linux Process Injection PoCs](https://github.com/akamai/Linux-Process-Injection)
+- [Linux inter-process injection without a ptrace syscall](https://www.levelblue.com/blogs/spiderlabs-blog/linux-based-inter-process-code-injection-without-ptrace-2/)

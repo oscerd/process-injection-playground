@@ -12,6 +12,7 @@ test: all
 	$(MAKE) -C ptrace_seize test
 	$(MAKE) -C ptrace_traceme test
 	$(MAKE) -C ld_audit test
+	$(MAKE) -C proc_mem test
 	$(MAKE) -C process_vm_writev test
 	$(MAKE) -C memfd_dlopen test
 

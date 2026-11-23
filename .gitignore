@@ -2,6 +2,7 @@
 /*/loader
 /*/observer
 /*/redirector
+/*/controlled_writer
 /*/*.so
 /*/victim-process/sample
 /process_vm_writev/victim-process/function_pointer
@@ -9,3 +10,5 @@
 /process_vm_writev/victim-process/got_partial
 /process_vm_writev/victim-process/got_full
 /process_vm_writev/victim-process/stack_return
+/proc_mem/victim-process/read_only
+/proc_mem/victim-process/non_dumpable

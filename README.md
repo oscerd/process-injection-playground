@@ -15,7 +15,7 @@ live process state and are intentionally architecture-specific.
 | [`ptrace`](ptrace/) | Running process | `PTRACE_POKETEXT` | `PTRACE_SETREGS` | [T1055.008](https://attack.mitre.org/techniques/T1055/008/) | x86_64 raw-code example |
 | [`ptrace_seize`](ptrace_seize/) | Running child | `PTRACE_SEIZE` and `PTRACE_INTERRUPT` | None | Related to [T1055.008](https://attack.mitre.org/techniques/T1055/008/) | Process control without injection |
 | [`ptrace_traceme`](ptrace_traceme/) | Opt-in child | `PTRACE_SETREGS` or `PTRACE_POKEUSER` | RIP redirected to existing code | [T1055.008](https://attack.mitre.org/techniques/T1055/008/) | x86_64, no code staging |
-| [`proc_mem`](proc_mem/) | Running process | `/proc/<pid>/mem` | `PTRACE_SETREGS` | [T1055.009](https://attack.mitre.org/techniques/T1055/009/) | x86_64 procfs example |
+| [`proc_mem`](proc_mem/) | Running process | `/proc/<pid>/mem` | Data-only or `PTRACE_SETREGS` | [T1055.009](https://attack.mitre.org/techniques/T1055/009/) | Includes read-only mapping and non-dumpable cases |
 | [`process_vm_writev`](process_vm_writev/) | Running child | `process_vm_writev` | Marker, function pointer, GOT, or saved return address | [T1055](https://attack.mitre.org/techniques/T1055/) | Includes non-dumpable and Full RELRO denials |
 | [`dlopen_inject`](dlopen_inject/) | Running process | ptrace memory writes | Remote `dlopen` call | T1055 / T1055.008 | x86_64, glibc, restores patched code |
 | [`ld_preload`](ld_preload/) | Process launch | Dynamic linker | Constructor and symbol interposition | [T1574.006](https://attack.mitre.org/techniques/T1574/006/) | Launch-time linker hijacking, not live injection |
@@ -47,10 +47,10 @@ make test
 ```
 
 The tests cover ptrace seize and detach, two opt-in register-write requests,
-loader auditing, benign data and control-flow writes, a saved return-address
-redirect, Partial versus Full RELRO, an asserted non-dumpable denial, and
-memory-backed shared-object loading. They normally need neither root nor a
-change to `kernel.yama.ptrace_scope`.
+procfs read-only memory behavior, loader auditing, benign data and control-flow
+writes, a saved return-address redirect, Partial versus Full RELRO, asserted
+non-dumpable denials, and memory-backed shared-object loading. They normally
+need neither root nor a change to `kernel.yama.ptrace_scope`.
 
 Individual labs retain their own `Makefile` and README:
 

@@ -75,7 +75,10 @@ Then compare it with `ptrace`, which adds memory writes and register changes.
 
 ## Stage 4: Other write and execution combinations
 
-- `proc_mem` writes through `/proc/<pid>/mem`, then redirects RIP with ptrace.
+- Start with the controlled `proc_mem` pair. It demonstrates a write through a
+  read-only mapping and then an access denial from `PR_SET_DUMPABLE=0`.
+- The legacy `proc_mem` example writes through `/proc/<pid>/mem`, then redirects
+  RIP with ptrace. It is manual and intentionally excluded from `make test`.
 - `dlopen_inject` writes a temporary call stub, invokes `dlopen`, and restores
   the overwritten instruction bytes and registers.
 
