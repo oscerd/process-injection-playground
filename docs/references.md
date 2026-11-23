@@ -32,9 +32,16 @@ see the [annotated reading guide](reading-guide.md).
 
 - Ori David, [The Definitive Guide to Linux Process Injection](https://www.akamai.com/blog/security-research/the-definitive-guide-to-linux-process-injection), 2024.
 - Akamai, [Linux-Process-Injection reference implementations](https://github.com/akamai/Linux-Process-Injection).
+- Philippe Grégoire, [linux-prinj proof-of-concept series](https://github.com/antifob/linux-prinj).
+- f0b, [Linux Process Injection series](https://blog.f0b.org/p/linux-process-injection-part2/), 2021.
 - Rory McNamara, [Linux Based Inter-Process Code Injection Without Ptrace](https://www.levelblue.com/blogs/spiderlabs-blog/linux-based-inter-process-code-injection-without-ptrace-2/), 2017.
 - rb, [Pure In-Memory (Shell)Code Injection in Linux Userland](https://deepsec.net/docs/Slides/2018/Pure_In-Memory_%28Shell%29Code_Injection_in_Linux_Userland_reenz0h.pdf), DeepSec 2018.
 - Aseem Jakhar, [Jugaad: Run-time Thread Injection](https://magazine.hitb.org/wp-content/uploads/2021/05/HITB-Ezine-Issue-006.pdf), HITB Magazine / DEF CON 19.
+- Julien Tinnes and Tavis Ormandy, [Playing with ptrace for fun and profit](https://repository.root-me.org/Reverse%20Engineering/x86/Unix/FR%20-%20SSTIC%2006%20-%20Playing%20with%20ptrace.pdf), SSTIC 2006.
+- gaffe23, [linux-inject remote shared-object loader](https://github.com/gaffe23/linux-inject).
+- David Buchanan, [dlinject](https://github.com/DavidBuchanan314/dlinject).
+- Bishop Fox, [Tampering with Processes Using procfs](https://assets.bishopfox.com/prod-1437/Documents/Guides/2022-Q3-ToolTechGuide-Asminject-FINAL.pdf), 2022.
+- Jary, [Detecting Shared Object Injection](https://virusbulletin.com/uploads/pdf/conference/vb2024/papers/Detecting-Shared-Object-injection.pdf), Virus Bulletin 2024.
 - Kyle Avery, [Linux Process Injection via Seccomp Notify](https://www.outflank.nl/blog/2025/12/09/seccomp-notify-injection/), 2025.
 
 ## Detection and validation

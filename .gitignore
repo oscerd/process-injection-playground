@@ -1,7 +1,10 @@
 /*/inject
 /*/loader
 /*/observer
+/*/redirector
 /*/*.so
 /*/victim-process/sample
 /process_vm_writev/victim-process/function_pointer
 /process_vm_writev/victim-process/non_dumpable
+/process_vm_writev/victim-process/got_partial
+/process_vm_writev/victim-process/got_full

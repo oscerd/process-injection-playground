@@ -129,7 +129,11 @@ static int run_spawn_demo(const char *victim_program) {
 
     if (request.magic != PIP_DEMO_MAGIC || request.remote_address == 0 ||
         request.length == 0 || request.length > sizeof(request.value) ||
-        (request.flags & ~PIP_EXPECT_DENIED) != 0) {
+        (request.flags & ~(PIP_EXPECT_DENIED | PIP_EXPECT_ERROR)) != 0 ||
+        (request.flags & (PIP_EXPECT_DENIED | PIP_EXPECT_ERROR)) ==
+            (PIP_EXPECT_DENIED | PIP_EXPECT_ERROR) ||
+        ((request.flags & PIP_EXPECT_ERROR) != 0 &&
+         request.expected_errno == 0)) {
         fprintf(stderr, "[-] Victim sent an invalid write request\n");
         kill(child, SIGTERM);
         waitpid(child, NULL, 0);
@@ -143,7 +147,7 @@ static int run_spawn_demo(const char *victim_program) {
 
     int write_result = write_remote(child, request.remote_address, request.value,
                                     request.length);
-    if ((request.flags & PIP_EXPECT_DENIED) != 0) {
+    if ((request.flags & (PIP_EXPECT_DENIED | PIP_EXPECT_ERROR)) != 0) {
         int write_error = errno;
         if (kill(child, SIGUSR1) != 0) {
             perror("signal denied-write result");
@@ -159,12 +163,27 @@ static int run_spawn_demo(const char *victim_program) {
         }
         if (write_result == 0) {
             fprintf(stderr,
-                    "[-] Write unexpectedly succeeded against a non-dumpable "
+                    "[-] Write unexpectedly succeeded against a protected "
                     "victim\n");
             return EXIT_FAILURE;
         }
-        if (write_error != EPERM && write_error != EACCES) {
+        if ((request.flags & PIP_EXPECT_ERROR) != 0 &&
+            (write_error == EPERM || write_error == EACCES)) {
+            fprintf(stderr,
+                    "[SKIP] Access policy masked the expected mapping "
+                    "permission failure\n");
+            return 77;
+        }
+        if ((request.flags & PIP_EXPECT_DENIED) != 0 &&
+            write_error != EPERM && write_error != EACCES) {
             fprintf(stderr, "[-] Expected an access error, received: %s\n",
+                    strerror(write_error));
+            return EXIT_FAILURE;
+        }
+        if ((request.flags & PIP_EXPECT_ERROR) != 0 &&
+            write_error != (int)request.expected_errno) {
+            fprintf(stderr, "[-] Expected %s, received: %s\n",
+                    strerror((int)request.expected_errno),
                     strerror(write_error));
             return EXIT_FAILURE;
         }
@@ -175,8 +194,13 @@ static int run_spawn_demo(const char *victim_program) {
             return EXIT_FAILURE;
         }
 
-        printf("[+] Kernel denied the write as expected\n");
-        printf("[+] Victim confirmed that the marker remained unchanged\n");
+        if ((request.flags & PIP_EXPECT_DENIED) != 0) {
+            printf("[+] Kernel denied the write as expected\n");
+        } else {
+            printf("[+] Kernel rejected the write with %s as expected\n",
+                   strerror(write_error));
+        }
+        printf("[+] Victim confirmed that protected state remained unchanged\n");
         return EXIT_SUCCESS;
     }
 

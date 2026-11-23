@@ -50,6 +50,19 @@ The expected sequence is `PTRACE_SEIZE`, `PTRACE_INTERRUPT`, a ptrace stop, and
 `PTRACE_DETACH`. No poke or register-write request should appear. This is a
 useful reminder that a ptrace event is not, by itself, proof of injection.
 
+Now compare the opt-in execution-redirection sequence:
+
+```bash
+strace -f -e trace=ptrace,wait4 \
+  ./ptrace_traceme/redirector --spawn \
+  ./ptrace_traceme/victim-process/sample
+```
+
+The child first issues `PTRACE_TRACEME`. After its deliberate stop, the parent
+uses `PTRACE_GETREGS`, `PTRACE_SETREGS`, and `PTRACE_CONT`. There is no poke
+request or new executable mapping, but RIP changes to an existing function in
+the victim.
+
 The negative remote-write case is also executable:
 
 ```bash
@@ -59,6 +72,20 @@ The negative remote-write case is also executable:
 
 The victim calls `PR_SET_DUMPABLE=0`; the parent expects `EPERM` or `EACCES` and
 also verifies that its marker was not changed.
+
+For a mapping-permission comparison, run the two GOT victims:
+
+```bash
+./process_vm_writev/inject --spawn \
+  ./process_vm_writev/victim-process/got_partial
+./process_vm_writev/inject --spawn \
+  ./process_vm_writev/victim-process/got_full
+```
+
+The first write changes only the resolved `puts` jump slot. The second reaches
+the same stage but receives `EFAULT` because Full RELRO made that slot read-only.
+If an outer access policy returns `EPERM` first, the test reports a skip because
+that policy masks the mapping-permission experiment.
 
 ## Audit example
 
@@ -84,6 +111,7 @@ than ad hoc commands.
 | ptrace | Attach followed by memory/register modification requests | GDB, debuggers, profilers, crash handlers |
 | `/proc/<pid>/mem` | One process opens and writes another PID's `mem` file | Debuggers, diagnostics, specialized checkpoint tools |
 | `process_vm_writev` | Source and target PIDs differ and the target is not an expected child/tool relationship | MPI/message-passing software, debuggers, compatibility layers |
+| GOT redirection | Remote write lands in a relocation slot and a later indirect call reaches an unusual executable address | Profilers, hot patching, compatibility and instrumentation tools |
 | `memfd` plus `dlopen` | Writes to a memfd followed by `/proc/self/fd` access and an executable memory-backed ELF mapping | JIT runtimes, sandboxing, package systems, temporary executable artifacts |
 | remote `dlopen` | ptrace activity followed by a new shared-object mapping | Debuggers, live instrumentation, observability agents |
 | `LD_PRELOAD` | Loader variable plus an unusual early library mapping | Profilers, sanitizers, compatibility shims, test harnesses |
@@ -97,8 +125,8 @@ than ad hoc commands.
   and record the denial, errno, and unchanged target state.
 - Compare same-UID, different-UID, container PID namespace, and user namespace
   cases in disposable environments.
-- For a future GOT lab, compile targets with Partial and Full RELRO and make the
-  blocked write an asserted test outcome.
+- Compare `got_partial` and `got_full`; verify the destination mapping
+  permissions and record the successful redirect versus asserted `EFAULT`.
 - Compare an ordinary file-backed `dlopen` with `memfd_dlopen` and record the
   differences in file, module-load, and memory-map telemetry.
 

@@ -5,7 +5,8 @@ CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -O2 -g
 .PHONY: all clean test
 
 VICTIMS := victim-process/sample victim-process/function_pointer \
-	victim-process/non_dumpable
+	victim-process/non_dumpable victim-process/got_partial \
+	victim-process/got_full
 
 all: inject $(VICTIMS)
 
@@ -20,6 +21,14 @@ victim-process/function_pointer: victim-process/function_pointer.c
 
 victim-process/non_dumpable: victim-process/non_dumpable.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $<
+
+victim-process/got_partial: victim-process/got_overwrite.c demo_protocol.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -fno-pie -fno-builtin-puts -no-pie \
+		-Wl,-z,relro,-z,lazy -o $@ $<
+
+victim-process/got_full: victim-process/got_overwrite.c demo_protocol.h
+	$(CC) $(CPPFLAGS) $(CFLAGS) -DFULL_RELRO -fno-pie -fno-builtin-puts \
+		-no-pie -Wl,-z,relro,-z,now -o $@ $<
 
 test: all
 	@set -e; for victim in $(VICTIMS); do \

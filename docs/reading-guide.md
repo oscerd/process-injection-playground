@@ -31,8 +31,10 @@ then compare these repository cases:
 | Case | Access or observation | Remote write | Execution change |
 | --- | --- | --- | --- |
 | `ptrace_seize` | Yes | No | No |
+| `ptrace_traceme` | Opt-in child tracing | No | RIP selects existing code |
 | marker victim | Yes | Data only | No |
 | function-pointer victim | Yes | Control-flow data | Reuses an existing callback |
+| GOT victim | Yes | One ELF jump slot | Reuses an existing callback |
 | raw ptrace lab | Yes | Instruction bytes | Changes RIP |
 | `dlopen_inject` | Yes | Temporary call stub and path | Calls the target loader |
 
@@ -71,6 +73,16 @@ the loader to add an object.
   covers memory-backed staging and user-space loading concepts.
 - Aseem Jakhar, [Jugaad: Run-time Thread Injection](https://magazine.hitb.org/wp-content/uploads/2021/05/HITB-Ezine-Issue-006.pdf),
   provides historical context for ptrace-driven thread manipulation.
+- Philippe Grégoire, [linux-prinj](https://github.com/antifob/linux-prinj),
+  provides compact PoCs for stack spraying, hollowing, unused executable areas,
+  and GOT/PLT redirection.
+- David Buchanan, [dlinject](https://github.com/DavidBuchanan314/dlinject),
+  demonstrates a restoration-oriented `/proc/<pid>/mem`, stack-pivot, and
+  shared-object loading chain without invoking the ptrace syscall.
+
+The [literature and PoC coverage map](literature-map.md) records which ideas are
+already represented, which were deliberately narrowed, and which remain future
+work.
 
 Treat implementation articles as environment-specific starting points. Check
 their architecture, kernel, libc, compiler, and security-control assumptions

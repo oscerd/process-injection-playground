@@ -21,15 +21,17 @@ fragile injection variants.
 - [x] Add a non-dumpable victim with an asserted denied-access result.
 - [ ] Add denied-access modes for namespaces, seccomp, and LSM policy.
 - [ ] Add multi-threaded and signal-interrupted victims.
-- [ ] Test PIE, NX, Partial RELRO, Full RELRO, stripped binaries, static linking,
-      glibc, and musl where relevant.
+- [x] Add a Partial versus Full RELRO executable comparison.
+- [ ] Test PIE, NX, stripped binaries, static linking, glibc, and musl where
+      relevant.
 - [ ] Add sanitizers and fuzz tests for maps/ELF parsers.
 
 ## Technique coverage
 
 - [x] Add the `process_vm_writev` memory-write primitive.
 - [x] Compose `process_vm_writev` with a separately testable execution trigger.
-- [ ] Add a GOT/function-pointer overwrite lab and Full RELRO blocked case.
+- [x] Add a targeted GOT overwrite lab and Full RELRO blocked case.
+- [x] Add an opt-in `PTRACE_TRACEME` register-redirection lab.
 - [ ] Add a controlled stack return-address overwrite lab.
 - [x] Add `PTRACE_SEIZE` and compare its stop behavior with `PTRACE_ATTACH`.
 - [x] Add a non-modifying `LD_AUDIT` loader instrumentation lab.

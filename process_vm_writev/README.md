@@ -4,7 +4,7 @@ This lab demonstrates `process_vm_writev(2)`, one of the three main Linux
 interfaces used to modify another process alongside `ptrace` writes and
 `/proc/<pid>/mem`.
 
-The directory contains three controlled victims:
+The directory contains five controlled victims:
 
 1. `sample` receives a benign 64-bit marker in a writable global variable. It
    demonstrates the remote-memory write primitive without redirecting execution.
@@ -14,6 +14,12 @@ The directory contains three controlled victims:
 3. `non_dumpable` calls `prctl(PR_SET_DUMPABLE, 0)` before requesting a write.
    The test passes only when the kernel rejects the write with an access error
    and the victim confirms that its protected marker remains unchanged.
+4. `got_partial` locates only its `puts` jump slot by parsing the in-memory ELF
+   dynamic table. With Partial RELRO, `process_vm_writev` replaces that writable
+   slot with an existing benign callback.
+5. `got_full` uses the same source compiled with Full RELRO and immediate
+   binding. The expected `EFAULT` result and unchanged jump slot are both
+   asserted.
 
 This distinction matters: `process_vm_writev` is a **write primitive**. A full
 process-injection chain also needs an execution trigger such as register, stack,
@@ -45,9 +51,16 @@ Observed marker: 0xc0defacecafebeef
 [REDIRECTED] Benign function-pointer callback executed
 Protected marker remained unchanged
 [+] Kernel denied the write as expected
-[+] Victim confirmed that the marker remained unchanged
+[GOT REDIRECTED] Existing benign callback executed
+[FULL RELRO] puts jump slot remained unchanged
+[+] Kernel rejected the write with Bad address as expected
 [+] Victim confirmed the requested behavior
 ```
+
+The GOT pair is an ELF64, non-PIE teaching example. It intentionally targets one
+named relocation rather than scanning or overwriting a broad range of pointers.
+The in-memory parser demonstrates how `DT_JMPREL`, `DT_SYMTAB`, and `DT_STRTAB`
+connect a symbol name to its jump slot.
 
 ## Manual mode
 
@@ -73,6 +86,8 @@ than weakening the host's policy.
 - No `PTRACE_ATTACH` request is needed for this example.
 - The function-pointer victim changes control flow but stages no new executable
   bytes; both possible callback functions were compiled into the target.
+- The Partial RELRO victim changes one dynamic-linker control-flow slot. The
+  Full RELRO victim turns the same request into an executable negative test.
 - The destination must be writable; unlike `/proc/<pid>/mem` and some ptrace
   requests, this interface respects the target mapping's permissions.
 - Access is still governed by a ptrace access-mode check and can fail with
@@ -87,3 +102,5 @@ than weakening the host's policy.
 - [Yama Linux Security Module](https://www.kernel.org/doc/html/latest/admin-guide/LSM/Yama.html)
 - [`PR_SET_DUMPABLE`](https://man7.org/linux/man-pages/man2/PR_SET_DUMPABLE.2const.html)
 - [The Definitive Guide to Linux Process Injection](https://www.akamai.com/blog/security-research/the-definitive-guide-to-linux-process-injection)
+- [Akamai Linux Process Injection PoCs](https://github.com/akamai/Linux-Process-Injection)
+- [System V ABI: ELF Object File Format](https://gabi.xinuos.com/elf.pdf)

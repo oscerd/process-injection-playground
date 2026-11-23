@@ -14,8 +14,9 @@ live process state and are intentionally architecture-specific.
 | --- | --- | --- | --- | --- | --- |
 | [`ptrace`](ptrace/) | Running process | `PTRACE_POKETEXT` | `PTRACE_SETREGS` | [T1055.008](https://attack.mitre.org/techniques/T1055/008/) | x86_64 raw-code example |
 | [`ptrace_seize`](ptrace_seize/) | Running child | `PTRACE_SEIZE` and `PTRACE_INTERRUPT` | None | Related to [T1055.008](https://attack.mitre.org/techniques/T1055/008/) | Process control without injection |
+| [`ptrace_traceme`](ptrace_traceme/) | Opt-in child | `PTRACE_TRACEME` and `PTRACE_SETREGS` | RIP redirected to existing code | [T1055.008](https://attack.mitre.org/techniques/T1055/008/) | x86_64, no code staging |
 | [`proc_mem`](proc_mem/) | Running process | `/proc/<pid>/mem` | `PTRACE_SETREGS` | [T1055.009](https://attack.mitre.org/techniques/T1055/009/) | x86_64 procfs example |
-| [`process_vm_writev`](process_vm_writev/) | Running child | `process_vm_writev` | Marker write or function-pointer redirection | [T1055](https://attack.mitre.org/techniques/T1055/) | Benign, rootless automated labs |
+| [`process_vm_writev`](process_vm_writev/) | Running child | `process_vm_writev` | Marker, function-pointer, or GOT update | [T1055](https://attack.mitre.org/techniques/T1055/) | Includes non-dumpable and Full RELRO denials |
 | [`dlopen_inject`](dlopen_inject/) | Running process | ptrace memory writes | Remote `dlopen` call | T1055 / T1055.008 | x86_64, glibc, restores patched code |
 | [`ld_preload`](ld_preload/) | Process launch | Dynamic linker | Constructor and symbol interposition | [T1574.006](https://attack.mitre.org/techniques/T1574/006/) | Launch-time linker hijacking, not live injection |
 | [`ld_audit`](ld_audit/) | Process launch | Runtime-linker audit API | Original binding is preserved | Related to [T1574.006](https://attack.mitre.org/techniques/T1574/006/) | Loader instrumentation, not injection |
@@ -45,10 +46,10 @@ Run the safe automated test:
 make test
 ```
 
-The tests cover ptrace seize and detach, loader auditing, a benign marker write,
-controlled function-pointer redirection, an asserted non-dumpable denial, and
-memory-backed shared-object loading. They normally need neither root nor a
-change to `kernel.yama.ptrace_scope`.
+The tests cover ptrace seize and detach, opt-in register redirection, loader
+auditing, benign data and control-flow writes, Partial versus Full RELRO, an
+asserted non-dumpable denial, and memory-backed shared-object loading. They
+normally need neither root nor a change to `kernel.yama.ptrace_scope`.
 
 Individual labs retain their own `Makefile` and README:
 
@@ -81,6 +82,7 @@ process. Keeping those distinctions visible is a core goal of this playground.
 - [Technique and capability matrix](docs/technique-matrix.md)
 - [Guided learning path](docs/lab-guide.md)
 - [Annotated reading guide](docs/reading-guide.md)
+- [Literature and PoC coverage map](docs/literature-map.md)
 - [Glossary](docs/glossary.md)
 - [Mitigation matrix](docs/mitigation-matrix.md)
 - [Detection lab](docs/detection-lab.md)
@@ -112,9 +114,9 @@ New labs should include:
 - cleanup or state-recovery behavior;
 - accurate ATT&CK mapping and primary references.
 
-The roadmap contains suggested additions including GOT overwrite, VDSO
-hijacking, remote `memfd` staging, AArch64 support, multi-thread recovery, and
-seccomp user-notification research.
+The roadmap contains suggested additions including stack return-address
+overwrite, VDSO hijacking, remote `memfd` staging, AArch64 support, multi-thread
+recovery, and seccomp user-notification research.
 
 ## License
 

@@ -48,18 +48,24 @@ Use the `process_vm_writev` victims in this order:
 2. `non_dumpable`: confirm that `PR_SET_DUMPABLE=0` blocks the same parent.
 3. `function_pointer`: change a writable control-flow value without staging new
    executable bytes.
+4. `got_partial`: parse the dynamic table and replace one writable jump slot.
+5. `got_full`: repeat the exact target selection and assert that the read-only
+   mapping rejects the write.
 
 This separates access policy, remote writing, and execution redirection into
 independently observable steps.
 
 ## Stage 3: Ptrace control
 
-Run `ptrace_seize` before the raw ptrace injector. It demonstrates that:
+Run `ptrace_seize`, then `ptrace_traceme`, before the raw ptrace injector. The
+pair demonstrates that:
 
 - establishing a trace relationship does not itself require modifying state;
 - `PTRACE_SEIZE` and `PTRACE_INTERRUPT` separate attachment from stopping;
 - ptrace acts on individual threads, which matters for multi-threaded targets;
 - detection should inspect request types and sequences.
+- a child can opt into tracing, after which `PTRACE_SETREGS` can redirect RIP
+  without staging new code.
 
 Then compare it with `ptrace`, which adds memory writes and register changes.
 

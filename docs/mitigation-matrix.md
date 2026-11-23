@@ -32,6 +32,6 @@ therefore correlate:
 - loader environment variables;
 - behavior that follows the memory or control-flow change.
 
-The `process_vm_writev/non_dumpable` test is the first executable negative case
-in this repository. Future labs should add asserted denials for Full RELRO,
-seccomp, and namespace boundaries.
+The non-dumpable victim asserts an access-policy denial. The Full RELRO victim
+asserts a mapping-permission failure after access is granted. Future labs should
+add asserted denials for seccomp and namespace boundaries.
