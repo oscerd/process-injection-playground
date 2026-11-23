@@ -39,6 +39,27 @@ Look for modification requests such as `PTRACE_POKETEXT`, `PTRACE_POKEDATA`,
 are important false-positive sources, so detection should include process
 ancestry, executable identity, target identity, and follow-on behavior.
 
+Compare that sequence with the non-modifying observer:
+
+```bash
+strace -f -e trace=ptrace,wait4 \
+  ./ptrace_seize/observer --spawn ./ptrace_seize/victim-process/sample
+```
+
+The expected sequence is `PTRACE_SEIZE`, `PTRACE_INTERRUPT`, a ptrace stop, and
+`PTRACE_DETACH`. No poke or register-write request should appear. This is a
+useful reminder that a ptrace event is not, by itself, proof of injection.
+
+The negative remote-write case is also executable:
+
+```bash
+./process_vm_writev/inject --spawn \
+  ./process_vm_writev/victim-process/non_dumpable
+```
+
+The victim calls `PR_SET_DUMPABLE=0`; the parent expects `EPERM` or `EACCES` and
+also verifies that its marker was not changed.
+
 ## Audit example
 
 The following host-wide audit rule requires administrative access. Review it
@@ -66,13 +87,14 @@ than ad hoc commands.
 | `memfd` plus `dlopen` | Writes to a memfd followed by `/proc/self/fd` access and an executable memory-backed ELF mapping | JIT runtimes, sandboxing, package systems, temporary executable artifacts |
 | remote `dlopen` | ptrace activity followed by a new shared-object mapping | Debuggers, live instrumentation, observability agents |
 | `LD_PRELOAD` | Loader variable plus an unusual early library mapping | Profilers, sanitizers, compatibility shims, test harnesses |
+| `LD_AUDIT` | Loader audit variable, audit namespace mappings, and early audit callbacks | Linker diagnostics, tracing, profiling, and test tools |
 
 ## Mitigation experiments
 
 - Run the manual `process_vm_writev` mode from an unrelated process under Yama
   mode 1 and confirm that the kernel normally returns `EPERM`.
-- Make the controlled victim non-dumpable with `PR_SET_DUMPABLE` and record how
-  the result changes.
+- Compare the successful marker victim with the automated non-dumpable victim
+  and record the denial, errno, and unchanged target state.
 - Compare same-UID, different-UID, container PID namespace, and user namespace
   cases in disposable environments.
 - For a future GOT lab, compile targets with Partial and Full RELRO and make the

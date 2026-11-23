@@ -13,10 +13,20 @@ mechanism and its defensive implications.
 - [MITRE ATT&CK: Reflective Code Loading (T1620)](https://attack.mitre.org/techniques/T1620/)
 - [`ptrace(2)`](https://man7.org/linux/man-pages/man2/ptrace.2.html)
 - [`process_vm_readv(2)` and `process_vm_writev(2)`](https://man7.org/linux/man-pages/man2/process_vm_readv.2.html)
+- [`PR_SET_DUMPABLE(2const)`](https://man7.org/linux/man-pages/man2/PR_SET_DUMPABLE.2const.html)
 - [`/proc/<pid>/mem`](https://man7.org/linux/man-pages/man5/proc_pid_mem.5.html)
 - [`memfd_create(2)`](https://man7.org/linux/man-pages/man2/memfd_create.2.html)
 - [`dlopen(3)`](https://man7.org/linux/man-pages/man3/dlopen.3.html)
+- [`rtld-audit(7)`](https://man7.org/linux/man-pages/man7/rtld-audit.7.html)
+- [`ld.so(8)`](https://man7.org/linux/man-pages/man8/ld.so.8.html)
+- [GNU C Library: Audit Module Loading](https://sourceware.org/glibc/manual/latest/html_node/Audit-Module-Loading.html)
+- [GNU C Library: Audit API Callbacks](https://sourceware.org/glibc/manual/latest/html_node/Audit-API-Callbacks.html)
+- [GNU C Library: Dynamic Linker Hardening](https://sourceware.org/glibc/manual/latest/html_node/Dynamic-Linker-Hardening.html)
+- [System V ABI: ELF Object File Format](https://gabi.xinuos.com/elf.pdf)
 - [Yama Linux Security Module](https://www.kernel.org/doc/html/latest/admin-guide/LSM/Yama.html)
+
+For an ordered route through these materials and the matching repository labs,
+see the [annotated reading guide](reading-guide.md).
 
 ## Technique research
 

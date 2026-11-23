@@ -128,7 +128,8 @@ static int run_spawn_demo(const char *victim_program) {
     close(request_pipe[0]);
 
     if (request.magic != PIP_DEMO_MAGIC || request.remote_address == 0 ||
-        request.length == 0 || request.length > sizeof(request.value)) {
+        request.length == 0 || request.length > sizeof(request.value) ||
+        (request.flags & ~PIP_EXPECT_DENIED) != 0) {
         fprintf(stderr, "[-] Victim sent an invalid write request\n");
         kill(child, SIGTERM);
         waitpid(child, NULL, 0);
@@ -140,8 +141,46 @@ static int run_spawn_demo(const char *victim_program) {
            request.remote_address);
     fflush(stdout);
 
-    if (write_remote(child, request.remote_address, request.value,
-                     request.length) != 0) {
+    int write_result = write_remote(child, request.remote_address, request.value,
+                                    request.length);
+    if ((request.flags & PIP_EXPECT_DENIED) != 0) {
+        int write_error = errno;
+        if (kill(child, SIGUSR1) != 0) {
+            perror("signal denied-write result");
+            kill(child, SIGTERM);
+            waitpid(child, NULL, 0);
+            return EXIT_FAILURE;
+        }
+
+        int status = 0;
+        if (waitpid(child, &status, 0) < 0) {
+            perror("waitpid");
+            return EXIT_FAILURE;
+        }
+        if (write_result == 0) {
+            fprintf(stderr,
+                    "[-] Write unexpectedly succeeded against a non-dumpable "
+                    "victim\n");
+            return EXIT_FAILURE;
+        }
+        if (write_error != EPERM && write_error != EACCES) {
+            fprintf(stderr, "[-] Expected an access error, received: %s\n",
+                    strerror(write_error));
+            return EXIT_FAILURE;
+        }
+        if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+            fprintf(stderr,
+                    "[-] Victim did not confirm unchanged state (status=%d)\n",
+                    status);
+            return EXIT_FAILURE;
+        }
+
+        printf("[+] Kernel denied the write as expected\n");
+        printf("[+] Victim confirmed that the marker remained unchanged\n");
+        return EXIT_SUCCESS;
+    }
+
+    if (write_result != 0) {
         int write_error = errno;
         kill(child, SIGTERM);
         waitpid(child, NULL, 0);

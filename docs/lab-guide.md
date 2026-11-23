@@ -1,0 +1,111 @@
+# Guided Lab Path
+
+The examples are most useful when treated as small mechanisms that can be
+combined, rather than as a list ordered by perceived stealth or complexity.
+
+## Before starting
+
+Collect the environment facts that affect the outcome:
+
+```bash
+uname -m
+uname -r
+cat /proc/sys/kernel/yama/ptrace_scope
+grep -E '^(NoNewPrivs|Seccomp|CapEff):' /proc/self/status
+```
+
+Build and run the deterministic suite:
+
+```bash
+make clean all
+make test
+```
+
+The automated tests only target child processes created by the test runner.
+They do not lower Yama settings, grant capabilities, or modify host security
+policy.
+
+## Stage 1: Loader behavior
+
+Start with mechanisms that act during a controlled process launch:
+
+1. `ld_preload`: observe constructors and ordinary symbol interposition.
+2. `ld_audit`: observe loader callbacks while preserving the original symbol
+   binding.
+
+Questions to answer:
+
+- Which environment variable activates each mechanism?
+- Which library namespace contains the module?
+- Does the victim's behavior change?
+- What changes under secure-execution mode or static linking?
+
+## Stage 2: Cross-process access
+
+Use the `process_vm_writev` victims in this order:
+
+1. `sample`: write data without changing control flow.
+2. `non_dumpable`: confirm that `PR_SET_DUMPABLE=0` blocks the same parent.
+3. `function_pointer`: change a writable control-flow value without staging new
+   executable bytes.
+
+This separates access policy, remote writing, and execution redirection into
+independently observable steps.
+
+## Stage 3: Ptrace control
+
+Run `ptrace_seize` before the raw ptrace injector. It demonstrates that:
+
+- establishing a trace relationship does not itself require modifying state;
+- `PTRACE_SEIZE` and `PTRACE_INTERRUPT` separate attachment from stopping;
+- ptrace acts on individual threads, which matters for multi-threaded targets;
+- detection should inspect request types and sequences.
+
+Then compare it with `ptrace`, which adds memory writes and register changes.
+
+## Stage 4: Other write and execution combinations
+
+- `proc_mem` writes through `/proc/<pid>/mem`, then redirects RIP with ptrace.
+- `dlopen_inject` writes a temporary call stub, invokes `dlopen`, and restores
+  the overwritten instruction bytes and registers.
+
+For each example, identify:
+
+1. How target access is authorized.
+2. Where bytes are written.
+3. Which event transfers execution.
+4. Which state is restored.
+5. Which artifacts remain after the example finishes.
+
+## Stage 5: Memory-backed loading
+
+`memfd_dlopen` copies an ELF shared object into an anonymous file and loads it
+inside the current process. Compare its memory maps and file activity with the
+ordinary file-backed `dlopen` path.
+
+This is in-process loading, not process injection. Combining it with remote
+injection would require a separate method to create, populate, and load the
+memfd within the target.
+
+## Observe and deny
+
+Where available, trace a lab with a narrow syscall filter:
+
+```bash
+strace -f -e trace=ptrace,process_vm_writev,memfd_create,openat \
+  make test
+```
+
+A useful lab includes both a successful mechanism and a denied case. Preserve
+the denial as evidence. Do not turn off a security control merely to make every
+example succeed.
+
+## Suggested exercises
+
+- Add a multi-threaded victim and record which thread IDs are traced.
+- Add `PR_SET_DUMPABLE=0` to another victim and compare the error path.
+- Compare PIE and non-PIE target addresses.
+- Inspect Partial and Full RELRO binaries with `readelf`.
+- Capture `/proc/<pid>/maps` before and after `dlopen` and `memfd_dlopen`.
+- Write a detector that distinguishes `PTRACE_SEIZE` observation from later
+  memory or register modification.

@@ -1,5 +1,7 @@
 /*/inject
 /*/loader
+/*/observer
 /*/*.so
 /*/victim-process/sample
 /process_vm_writev/victim-process/function_pointer
+/process_vm_writev/victim-process/non_dumpable

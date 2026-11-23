@@ -4,7 +4,8 @@ CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -O2 -g
 
 .PHONY: all clean test
 
-VICTIMS := victim-process/sample victim-process/function_pointer
+VICTIMS := victim-process/sample victim-process/function_pointer \
+	victim-process/non_dumpable
 
 all: inject $(VICTIMS)
 
@@ -15,6 +16,9 @@ victim-process/sample: victim-process/sample.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 victim-process/function_pointer: victim-process/function_pointer.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $<
+
+victim-process/non_dumpable: victim-process/non_dumpable.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 test: all
