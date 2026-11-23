@@ -1,5 +1,6 @@
 SUBDIRS := ptrace ptrace_seize ptrace_traceme process_hollowing ld_preload \
-	ld_audit proc_mem dlopen_inject process_vm_writev memfd_dlopen
+	ld_audit proc_mem dlopen_inject remote_memfd_dlopen process_vm_writev \
+	memfd_dlopen
 
 .PHONY: all clean test $(SUBDIRS)
 
@@ -14,6 +15,7 @@ test: all
 	$(MAKE) -C process_hollowing test
 	$(MAKE) -C ld_audit test
 	$(MAKE) -C proc_mem test
+	$(MAKE) -C remote_memfd_dlopen test
 	$(MAKE) -C process_vm_writev test
 	$(MAKE) -C memfd_dlopen test
 
