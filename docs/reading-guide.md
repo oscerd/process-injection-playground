@@ -33,6 +33,8 @@ then compare these repository cases:
 | `ptrace_seize` | Yes | No | No |
 | `ptrace_traceme` | Opt-in child tracing | No | RIP selects existing code |
 | `ptrace_restore` | Yes | Temporary code and data | Trap, restore, detach, and resume |
+| `thread_hijack` | Every TID | One shared patch slot and marker | One selected worker traps; group later resumes |
+| `vdso_hijack` | Yes | One VDSO function | Victim calls modified then restored VDSO code |
 | entry-point-stomping victim | Exec-time child tracing | Initial code bytes | Resume after the exec stop |
 | marker victim | Yes | Data only | No |
 | function-pointer victim | Yes | Control-flow data | Reuses an existing callback |
@@ -44,6 +46,10 @@ then compare these repository cases:
 
 This vocabulary prevents a syscall alert, a memory write, and completed code
 execution from being treated as equivalent events.
+
+The ptrace manual explicitly defines a tracee as one thread. Use
+`thread_hijack` to connect that rule to `/proc/<pid>/task`, stop-the-world
+coordination, selected-thread register state, and group-wide detach behavior.
 
 ## 3. Learn ELF and the runtime linker
 

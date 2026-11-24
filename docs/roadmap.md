@@ -22,7 +22,8 @@ fragile injection variants.
 - [x] Add a save/trap/restore test proving that the target remains alive.
 - [x] Add a non-dumpable victim with an asserted denied-access result.
 - [ ] Add denied-access modes for namespaces, seccomp, and LSM policy.
-- [ ] Add multi-threaded and signal-interrupted victims.
+- [x] Add a deterministic multi-threaded victim and whole-group recovery.
+- [ ] Add clone races and asynchronous signal interruption during tracing.
 - [x] Add a Partial versus Full RELRO executable comparison.
 - [ ] Test PIE, NX, stripped binaries, static linking, glibc, and musl where
       relevant.
@@ -42,7 +43,7 @@ fragile injection variants.
 - [x] Add a non-modifying `LD_AUDIT` loader instrumentation lab.
 - [x] Add in-process `memfd`-backed shared-object staging.
 - [x] Add an on-disk versus inherited-`memfd` remote `dlopen` comparison.
-- [ ] Add a VDSO hijacking lab mapped to T1055.014.
+- [x] Add a reversible VDSO function-replacement lab mapped to T1055.014.
 - [ ] Add a GDB-based example as a legitimate-tool comparison.
 - [ ] Add seccomp user-notification as an experimental controlled-launch lab.
 

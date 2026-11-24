@@ -46,3 +46,8 @@ governs the remote call, while seccomp or an LSM can separately affect memfd
 creation, `/proc/self/fd` access, and executable mappings. Its automated memfd
 is created by the parent before the controlled child starts, so a target-side
 `memfd_create` denial is not exercised by that lab.
+
+Thread-group tracing shows that ptrace authorization is checked per tracee and
+that reliable policy and telemetry must retain TIDs, not only process leaders.
+The VDSO lab also demonstrates that an executable mapping can be changed
+through ptrace even when its ordinary mapping permissions are read-execute.

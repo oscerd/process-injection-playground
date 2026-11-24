@@ -73,8 +73,10 @@ pair demonstrates that:
 
 Run `ptrace_restore` next. It adds a temporary code stub and register redirect,
 regains control through `INT3`, restores code, data, and registers, and proves
-that the child resumes. Then compare it with the legacy `ptrace` example, which
-adds memory writes and register changes without recovery.
+that the child resumes. Follow it with `thread_hijack`, which enumerates and
+stops a complete thread group but changes only one selected worker. Then compare
+both with the legacy `ptrace` example, which adds memory writes and register
+changes without recovery.
 
 ## Stage 4: Other write and execution combinations
 
@@ -85,6 +87,9 @@ adds memory writes and register changes without recovery.
 - `process_hollowing` stops a child immediately after `exec` and replaces its
   first instructions with a benign exit marker. Compare the precise term
   "entry-point stomping" with full image replacement.
+- `vdso_hijack` replaces eight bytes in `__vdso_gettimeofday`, exercises the
+  modified function, and restores the kernel-provided mapping. Compare that
+  narrow surface with the broader T1055.014 chain described by ATT&CK.
 - `dlopen_inject` writes a temporary call stub, invokes `dlopen`, and restores
   the overwritten instruction bytes and registers.
 
@@ -129,5 +134,7 @@ example succeed.
 - Inspect Partial and Full RELRO binaries with `readelf`.
 - Capture `/proc/<pid>/maps` for both `remote_memfd_dlopen` modes and compare
   named and `memfd:` mappings.
+- Trace `thread_hijack` and count which ptrace requests target the leader, the
+  selected worker, and the stopped sibling workers.
 - Write a detector that distinguishes `PTRACE_SEIZE` observation from later
   memory or register modification.

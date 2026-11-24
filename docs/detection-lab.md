@@ -80,6 +80,19 @@ an `INT3` stop, restoration writes, verification reads, and detach. Restoration
 reduces the lasting in-memory artifact, but it does not erase the earlier
 ptrace sequence from syscall, audit, or endpoint telemetry.
 
+Now compare a complete thread group:
+
+```bash
+strace -f -e trace=ptrace,wait4,tgkill \
+  ./thread_hijack/injector --spawn \
+  ./thread_hijack/victim-process/sample
+```
+
+The injector reads `/proc/<pid>/task`, sends `PTRACE_SEIZE` and
+`PTRACE_INTERRUPT` to every TID, but sends code and register writes only to the
+selected worker. A detector should retain the TID as well as the process ID so
+that group coordination is not mistaken for four unrelated trace targets.
+
 The negative remote-write case is also executable:
 
 ```bash
@@ -141,6 +154,18 @@ The high-signal sequence is `PTRACE_TRACEME`, `execve`, an exec-time stop,
 `PTRACE_GETREGS`, `PTRACE_POKETEXT`, and continuation. A debugger can share much
 of that lifecycle, so verify that the entry bytes diverge from the backing file.
 
+Observe the VDSO destination separately:
+
+```bash
+strace -f -e trace=ptrace,wait4,kill \
+  ./vdso_hijack/injector --spawn ./vdso_hijack/victim-process/sample
+```
+
+The write address belongs to `[vdso]`, not the main executable, heap, stack, or
+a newly allocated mapping. The lab restores the original bytes, so a later
+snapshot alone will not show the temporary change. Correlate the ptrace write,
+signal-driven execution, trap, restoration write, and destination mapping.
+
 Compare remote disk-backed and memfd-backed loader activity:
 
 ```bash
@@ -183,6 +208,8 @@ than ad hoc commands.
 | --- | --- | --- |
 | ptrace | Attach followed by memory/register modification requests | GDB, debuggers, profilers, crash handlers |
 | restored ptrace execution | Writes and continuation followed by `SIGTRAP`, reverse writes, verification reads, and detach | Debuggers, hot patchers, live instrumentation |
+| thread-group hijack | One tracer seizes every TID but modifies registers for one selected worker | Multi-thread debuggers, profilers, checkpoint tools |
+| VDSO replacement | Ptrace write lands in `[vdso]` and is followed by execution at the modified function | Specialized debuggers and instrumentation |
 | `/proc/<pid>/mem` | One process opens and writes another PID's `mem` file | Debuggers, diagnostics, specialized checkpoint tools |
 | exec-time entry stomp | Trace-before-exec followed by writes at initial RIP and immediate changed behavior | Debuggers, instrumentation, test harnesses |
 | `process_vm_writev` | Source and target PIDs differ and the target is not an expected child/tool relationship | MPI/message-passing software, debuggers, compatibility layers |

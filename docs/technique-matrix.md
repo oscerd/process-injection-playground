@@ -11,6 +11,8 @@ injection,” which makes examples difficult to compare.
 | `ptrace_traceme` with `SETREGS` | Opt-in child | Register set replaced with `PTRACE_SETREGS` | RIP selects an existing function | x86_64 | Child permits its parent with `PTRACE_TRACEME` | No restoration; selected benign function exits |
 | `ptrace_traceme` with `POKEUSER` | Opt-in child | RIP and RSP user-area fields written individually | RIP selects an existing function | x86_64 | Child permits its parent with `PTRACE_TRACEME` | No restoration; selected benign function exits |
 | `ptrace_restore` | Existing child | Dedicated code slot, data marker, and registers changed with ptrace | Temporary stub writes a marker and traps with `INT3` | x86_64 | Parent-child ptrace attach permitted | Code, marker, and registers are read back and verified before detach; child resumes normally |
+| `thread_hijack` | Stable four-TID child | Every TID seized and stopped; one worker's code, data, and registers changed | Selected worker traps with `INT3` while siblings remain stopped | x86_64, POSIX threads | Ptrace seize permitted for every TID | Selected state restored and verified; every TID detached and resumed |
+| `vdso_hijack` | Existing child | Eight bytes at `__vdso_gettimeofday` replaced with ptrace | Victim directly calls the modified VDSO function | x86_64 with named VDSO export | Parent-child ptrace attach permitted | Original VDSO bytes restored and normal function result asserted |
 | `process_hollowing` entry stomp | Exec-stopped child | `PTRACE_POKETEXT` replaces bytes at initial RIP | Child continues at the modified entry point | x86_64 | Child requests tracing before `exec` | No restoration; benign replacement exits with marker 42 |
 | `proc_mem` | Existing process | Write to `/proc/<pid>/mem` | RIP changed with `PTRACE_SETREGS` | x86_64 | procfs memory access and ptrace attach permitted | No; target state is overwritten |
 | `proc_mem` read-only marker | Existing child | Positioned write to `/proc/<pid>/mem` | None | Generally architecture-neutral | Ptrace access-mode check permits opening the file; kernel permits force override | Not needed; victim observes benign data and exits |
@@ -32,6 +34,10 @@ injection,” which makes examples difficult to compare.
 
 - Ptrace-based modification maps directly to
   [T1055.008, Ptrace System Calls](https://attack.mitre.org/techniques/T1055/008/).
+- The `vdso_hijack` lab isolates reversible code modification inside `[vdso]`.
+  It maps to the VDSO surface in
+  [T1055.014](https://attack.mitre.org/techniques/T1055/014/) but does not
+  reproduce the broader GOT and shared-object loading chain described there.
 - The `process_hollowing` lab is a Linux entry-point-stomping analogue built
   from ptrace operations. MITRE's
   [T1055.012, Process Hollowing](https://attack.mitre.org/techniques/T1055/012/)
@@ -66,7 +72,6 @@ Security Modules can therefore affect all three approaches.
 
 The most useful next combinations are:
 
-1. Multi-thread targets and signal/syscall interruption.
+1. Clone races and signal/syscall interruption in a changing thread group.
 2. AArch64 register and instruction-cache handling.
-3. VDSO hijacking as an advanced Linux-specific lab.
-4. A target-created memfd comparison using a reversible remote syscall path.
+3. A target-created memfd comparison using a reversible remote syscall path.

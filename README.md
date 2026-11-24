@@ -23,6 +23,8 @@ process state and are intentionally architecture-specific.
 | [`ptrace_seize`](ptrace_seize/) | Running child | `PTRACE_SEIZE` and `PTRACE_INTERRUPT` | None | Related to [T1055.008](https://attack.mitre.org/techniques/T1055/008/) | Process control without injection |
 | [`ptrace_traceme`](ptrace_traceme/) | Opt-in child | `PTRACE_SETREGS` or `PTRACE_POKEUSER` | RIP redirected to existing code | [T1055.008](https://attack.mitre.org/techniques/T1055/008/) | x86_64, no code staging |
 | [`ptrace_restore`](ptrace_restore/) | Running child | Temporary code, data, and register changes | `INT3` trap and resume | [T1055.008](https://attack.mitre.org/techniques/T1055/008/) | Asserts complete state restoration |
+| [`thread_hijack`](thread_hijack/) | Multi-threaded child | Stop all TIDs, modify one worker | Selected worker traps through `INT3` | [T1055.008](https://attack.mitre.org/techniques/T1055/008/) | Per-thread control and group recovery |
+| [`vdso_hijack`](vdso_hijack/) | Running child | Temporary `[vdso]` code replacement | Direct VDSO function call | [T1055.014](https://attack.mitre.org/techniques/T1055/014/) | Narrow reversible VDSO surface lab |
 | [`process_hollowing`](process_hollowing/) | Exec-stopped child | `PTRACE_POKETEXT` at initial RIP | Replaced entry point | Related to T1055.008 | x86_64 entry-point stomping analogue |
 | [`proc_mem`](proc_mem/) | Running process | `/proc/<pid>/mem` | Data-only or `PTRACE_SETREGS` | [T1055.009](https://attack.mitre.org/techniques/T1055/009/) | Includes read-only mapping and non-dumpable cases |
 | [`process_vm_writev`](process_vm_writev/) | Running child | `process_vm_writev` | Marker, function pointer, GOT, or saved return address | [T1055](https://attack.mitre.org/techniques/T1055/) | Includes non-dumpable and Full RELRO denials |
@@ -56,12 +58,13 @@ Run the safe automated test:
 make test
 ```
 
-The tests cover ptrace seize and detach, opt-in register writes, full ptrace
-state restoration, exec-time entry-point stomping, procfs read-only memory
-behavior, loader auditing, benign data and control-flow writes, a saved
-return-address redirect, Partial versus Full RELRO, asserted non-dumpable
-denials, and local and remote memory-backed shared-object loading. They normally
-need neither root nor a change to `kernel.yama.ptrace_scope`.
+The tests cover ptrace seize and detach, opt-in register writes, state
+restoration, multi-thread coordination, reversible VDSO modification,
+exec-time entry-point stomping, procfs read-only memory behavior, loader
+auditing, benign data and control-flow writes, a saved return-address redirect,
+Partial versus Full RELRO, asserted non-dumpable denials, and local and remote
+memory-backed shared-object loading. They normally need neither root nor a
+change to `kernel.yama.ptrace_scope`.
 
 Individual labs retain their own `Makefile` and README:
 
@@ -127,8 +130,8 @@ New labs should include:
 - cleanup or state-recovery behavior;
 - accurate ATT&CK mapping and primary references.
 
-The roadmap contains suggested additions including VDSO hijacking, AArch64
-support, multi-thread recovery, and seccomp user-notification research.
+The roadmap contains suggested additions including AArch64 support, advanced
+multi-thread races, and seccomp user-notification research.
 
 ## License
 
